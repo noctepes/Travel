@@ -1,0 +1,2692 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Chi tiêu chuyến Cao Bằng</title>
+<script>
+  // đặt theme trước khi render để không bị chớp sáng
+  (function(){
+    try{
+      var saved=localStorage.getItem('cb-trip-theme-v1');
+      var dark = saved ? saved==='dark'
+        : (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+      document.documentElement.setAttribute('data-theme', dark?'dark':'light');
+    }catch(e){ document.documentElement.setAttribute('data-theme','light'); }
+  })();
+</script>
+<meta name="theme-color" content="#FBFBFA" id="theme-color-meta">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Cao Bằng">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<style>
+  :root{
+    color-scheme:light;
+    --bg:#FBFBFA;
+    --surface:#FFFFFF;
+    --border:#EAEAEA;
+    --hairline:#F2F2F0;
+    --subtle:#F1F1EF;
+    --hover:#F5F5F3;
+    --chip-bg:#F4F4F2;
+    --text:#2F3437;
+    --muted:#5F5D58;
+    --ink:#111111;
+    --ink-hover:#333333;
+    --on-ink:#FFFFFF;
+    --danger:#9F2F2D;
+    --danger-bg:#FDEBEC;
+    --danger-border:#F3D8D9;
+    --ok:#346538;
+    --warn:#956400;
+    --overlay-bg:rgba(20,18,16,0.38);
+    --a-money:#2F7D4F;   --a-money-bg:#E7F2EA;
+    --a-weather:#2A6F97; --a-weather-bg:#E3EFF7;
+    --a-plan:#6B4BA0;    --a-plan-bg:#EFE9F7;
+    --a-note:#9A6212;    --a-note-bg:#FBF0DC;
+    --a-chart:#1E7A5C;   --a-chart-bg:#E2F2EC;
+    --shadow-fab:0 4px 14px rgba(0,0,0,0.2);
+    --shadow-toast:0 4px 12px rgba(0,0,0,0.22);
+    --radius-lg:16px;
+    --radius-md:10px;
+    --radius-sm:7px;
+    --font-sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+    --font-serif:Georgia,"Times New Roman",ui-serif,serif;
+  }
+  :root[data-theme="dark"]{
+    color-scheme:dark;
+    --bg:#191918;
+    --surface:#212120;
+    --border:#34332F;
+    --hairline:#2C2B29;
+    --subtle:#2C2B29;
+    --hover:#2C2B29;
+    --chip-bg:#2C2B29;
+    --text:#E6E4DF;
+    --muted:#A3A09A;
+    --ink:#EFEDE8;
+    --ink-hover:#FFFFFF;
+    --on-ink:#191918;
+    --danger:#E59B98;
+    --danger-bg:#3A2321;
+    --danger-border:#57332F;
+    --ok:#93C398;
+    --warn:#D8AC59;
+    --overlay-bg:rgba(0,0,0,0.62);
+    --a-money:#7FC59A;   --a-money-bg:#21332A;
+    --a-weather:#84BEDD; --a-weather-bg:#1C2F3C;
+    --a-plan:#BEA4E3;    --a-plan-bg:#2C2338;
+    --a-note:#DCB268;    --a-note-bg:#372B18;
+    --a-chart:#7FC9AE;   --a-chart-bg:#1D332C;
+    --shadow-fab:0 4px 14px rgba(0,0,0,0.5);
+    --shadow-toast:0 4px 12px rgba(0,0,0,0.5);
+  }
+  body{transition-property:background-color,color;transition-duration:180ms;transition-timing-function:ease-out;}
+  *{box-sizing:border-box;}
+  [hidden]{display:none !important;}
+  html{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;}
+  body{
+    margin:0;background:var(--bg);color:var(--text);
+    font-family:var(--font-sans);line-height:1.55;padding-bottom:100px;
+  }
+  .wrap{max-width:1120px;margin:0 auto;padding:30px 20px 40px;}
+  #loading{color:var(--muted);font-size:15.5px;padding:40px 0;text-align:center;}
+
+  /* ---------- header ---------- */
+  .header{padding-bottom:20px;border-bottom:1px solid var(--border);margin-bottom:22px;}
+  .header-top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;}
+  .header-actions{display:flex;gap:6px;flex-shrink:0;}
+  .trip-name{font-family:var(--font-serif);font-size:31px;letter-spacing:-0.02em;line-height:1.15;margin:0;text-wrap:balance;}
+  .trip-dates-row{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;margin-top:8px;}
+  .trip-dates{color:var(--muted);font-size:15px;}
+  .sync-chip{
+    display:inline-flex;align-items:center;gap:8px;min-height:36px;padding:0 13px;
+    border:1px solid var(--border);border-radius:99px;background:var(--surface);color:var(--text);
+    font-size:14px;font-family:inherit;cursor:pointer;white-space:nowrap;
+    transition-property:background-color,border-color;transition-duration:150ms;transition-timing-function:ease-out;
+  }
+  .sync-chip:hover{background:var(--hover);}
+  .sync-dot{width:9px;height:9px;border-radius:99px;background:var(--muted);flex-shrink:0;}
+  .sync-chip.ok .sync-dot,.sd-ok{background:var(--ok);}
+  .sync-chip.wait .sync-dot,.sync-chip.off2 .sync-dot,.sd-wait,.sd-off2{background:var(--warn);}
+  .sync-chip.err .sync-dot,.sd-err{background:var(--danger);}
+  .sd-off{background:var(--muted);}
+  .sync-status{display:flex;align-items:center;gap:9px;font-size:17px;font-weight:600;margin-bottom:6px;}
+  .sync-status .sync-dot{width:11px;height:11px;}
+  .sync-note{font-size:14.5px;color:var(--muted);line-height:1.55;margin:8px 0;text-wrap:pretty;}
+  .sync-err{font-size:14.5px;color:var(--danger);line-height:1.5;margin:6px 0 8px;text-wrap:pretty;}
+  .sync-label{display:block;font-size:13.5px;color:var(--muted);margin:14px 0 6px;}
+  .sync-row{display:flex;gap:8px;align-items:stretch;margin-top:10px;}
+  .sync-row input{flex:1;min-width:0;}
+  .sync-row .btn{flex:1;}
+  .sync-help{margin-top:18px;border-top:1px solid var(--border);padding-top:6px;}
+  .sync-help summary{cursor:pointer;font-weight:600;font-size:15px;padding:10px 0;}
+  .sync-help ol{margin:4px 0 8px;padding-left:22px;font-size:14.5px;line-height:1.6;}
+  .sync-help li{margin-bottom:6px;text-wrap:pretty;}
+  pre.rules{
+    font-size:12.5px;line-height:1.55;background:var(--subtle);border:1px solid var(--border);border-radius:var(--radius-sm);
+    padding:12px;overflow:auto;white-space:pre;user-select:all;margin:8px 0;
+  }
+
+  .icon-btn{
+    width:40px;height:40px;min-width:40px;
+    border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);
+    display:inline-flex;align-items:center;justify-content:center;cursor:pointer;color:var(--muted);
+    transition-property:background-color,border-color,transform,color;transition-duration:150ms;transition-timing-function:ease-out;
+    padding:0;text-decoration:none;
+  }
+  .icon-btn:hover{background:var(--hover);color:var(--text);}
+  .icon-btn:active{transform:scale(0.94);}
+  .icon-btn.danger:hover{background:var(--danger-bg);color:var(--danger);border-color:var(--danger-border);}
+  button:focus-visible,input:focus-visible,select:focus-visible,a:focus-visible{outline:2px solid var(--ink);outline-offset:2px;}
+
+  /* ---------- layout ---------- */
+  .layout{display:grid;grid-template-columns:356px 1fr;gap:26px;align-items:start;}
+  .col-side{display:flex;flex-direction:column;gap:22px;}
+  .col-main{display:flex;flex-direction:column;gap:22px;}
+  @media (max-width:880px){
+    .layout{display:flex;flex-direction:column;gap:24px;}
+    .col-side,.col-main{display:contents;}
+    #summary-block{order:1;}
+    #weather-block{order:2;}
+    #days-block{order:3;}
+    #prepaid-block{order:4;}
+    #packing-block{order:5;}
+    #outfit-block{order:6;}
+    #notes-block{order:7;}
+    #cat-section{order:8;}
+  }
+
+  .sec{display:flex;align-items:center;gap:9px;margin-bottom:12px;}
+  .sec-icon{
+    width:30px;height:30px;min-width:30px;border-radius:9px;
+    display:inline-flex;align-items:center;justify-content:center;
+    background:var(--cb);color:var(--c);
+  }
+  .sec-text{flex:1;font-size:15.5px;font-weight:600;letter-spacing:-0.01em;min-width:0;text-wrap:balance;}
+  .empty-hint{color:var(--muted);font-size:14.5px;padding:6px 0;text-wrap:pretty;}
+
+  /* ---------- summary ---------- */
+  .hero-card{
+    background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);
+    padding:18px;margin-bottom:9px;
+  }
+  .hero-label{display:flex;align-items:center;gap:7px;font-size:13px;color:var(--muted);margin-bottom:4px;}
+  .hero-value{
+    font-family:var(--font-serif);font-size:38px;line-height:1.1;letter-spacing:-0.025em;
+    font-variant-numeric:tabular-nums;margin-bottom:14px;text-wrap:balance;color:var(--a-money);
+  }
+  .hero-value.warn{color:var(--warn);}
+  .hero-value.danger{color:var(--danger);}
+  .stat-stack{display:flex;gap:8px;margin-bottom:14px;}
+  .stat-card{flex:1;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);padding:12px 13px;min-width:0;}
+  .stat-label{font-size:13px;color:var(--muted);margin-bottom:4px;}
+  .stat-value{font-size:16.5px;font-weight:600;font-variant-numeric:tabular-nums;letter-spacing:-0.01em;text-wrap:balance;}
+
+  .progress-track{height:8px;background:var(--subtle);border-radius:99px;overflow:hidden;margin-bottom:9px;}
+  .progress-fill{height:100%;border-radius:99px;background:var(--a-money);width:0%;
+    transition-property:width,background-color;transition-duration:300ms;transition-timing-function:ease-out;}
+  .pacing-line{font-size:13.5px;color:var(--muted);min-height:18px;text-wrap:pretty;line-height:1.45;}
+
+  /* ---------- weather ---------- */
+  .refresh-btn{width:30px;height:30px;min-width:30px;border:none;background:none;}
+  .weather-panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);padding:14px;}
+  .weather-region{font-size:15px;margin-bottom:3px;}
+  .weather-now{font-family:var(--font-serif);font-size:29px;letter-spacing:-0.02em;font-variant-numeric:tabular-nums;color:var(--a-weather);}
+  .weather-desc{font-size:14.5px;color:var(--muted);margin-top:2px;text-wrap:pretty;}
+  .weather-meta{font-size:13px;color:var(--muted);margin-top:9px;padding-top:9px;border-top:1px solid var(--border);text-wrap:pretty;}
+  .weather-chip{
+    font-size:13px;color:var(--a-weather);font-weight:600;font-variant-numeric:tabular-nums;
+    white-space:nowrap;padding:2px 8px;background:var(--a-weather-bg);border-radius:99px;
+  }
+
+  /* ---------- prepaid ---------- */
+  .mini-btn{width:34px;height:34px;min-width:34px;border:none;background:none;}
+  .pp-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);padding:4px 14px;}
+  .pp-row{display:flex;align-items:center;gap:9px;padding:10px 0;}
+  .pp-row + .pp-row{border-top:1px solid var(--hairline);}
+  .pp-main{flex:1;min-width:0;}
+  .pp-name{font-size:15px;text-wrap:pretty;}
+  .pp-sub{font-size:13px;color:var(--muted);margin-top:2px;font-variant-numeric:tabular-nums;text-wrap:pretty;}
+  .pp-sub .due{color:var(--warn);}
+  .pp-sub .done{color:var(--ok);}
+  .pp-actions{display:flex;gap:0;flex-shrink:0;}
+  .pp-actions .icon-btn{width:34px;height:34px;min-width:34px;border:none;background:none;}
+  .pp-footer{
+    display:flex;justify-content:space-between;gap:10px;padding:10px 0;
+    border-top:1px solid var(--border);font-size:13.5px;font-variant-numeric:tabular-nums;
+  }
+  .pp-footer span:last-child{font-weight:600;}
+  .pp-footer.due span{color:var(--warn);}
+  .pp-footer.due span:last-child{font-weight:700;}
+
+  /* ---------- packing ---------- */
+  .count-chip{
+    font-size:13.5px;font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap;
+    padding:2px 10px;border-radius:99px;background:var(--a-money-bg);color:var(--ok);
+  }
+  .pack-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);padding:2px 12px 10px;}
+  .pack-group-title{
+    display:flex;justify-content:space-between;gap:8px;padding:14px 0 2px 4px;
+    font-size:12.5px;font-weight:600;text-transform:uppercase;letter-spacing:0.04em;color:var(--muted);
+  }
+  .pack-item{display:flex;align-items:center;gap:2px;}
+  .pack-item + .pack-item{border-top:1px solid var(--hairline);}
+  .pack-check{
+    width:44px;height:44px;min-width:44px;background:none;border:none;padding:0;cursor:pointer;
+    display:inline-flex;align-items:center;justify-content:center;
+  }
+  .pack-check .box{
+    width:22px;height:22px;border-radius:7px;border:1.5px solid var(--muted);color:var(--bg);
+    display:inline-flex;align-items:center;justify-content:center;
+    transition-property:background-color,border-color;transition-duration:150ms;transition-timing-function:ease-out;
+  }
+  .pack-check .box svg{opacity:0;}
+  .pack-item.done .box{background:var(--a-money);border-color:var(--a-money);}
+  .pack-item.done .box svg{opacity:1;}
+  .pack-text{flex:1;min-width:0;font-size:15px;padding:8px 0;cursor:pointer;text-wrap:pretty;}
+  .pack-item.done .pack-text{color:var(--muted);text-decoration:line-through;}
+  .pack-actions{display:flex;flex-shrink:0;}
+  .pack-actions .icon-btn{width:34px;height:34px;min-width:34px;border:none;background:none;}
+  .pack-foot{text-align:right;}
+  textarea{resize:vertical;min-height:84px;line-height:1.5;}
+  .note-tag{display:inline-block;margin-top:8px;font-size:13px;padding:3px 10px;border-radius:99px;background:var(--a-plan-bg);color:var(--a-plan);}
+
+  /* ---------- notes ---------- */
+  .note-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);padding:14px;margin-bottom:9px;}
+  .note-top{display:flex;align-items:flex-start;gap:9px;}
+  .note-title{flex:1;font-size:15.5px;font-weight:600;min-width:0;text-wrap:balance;}
+  .note-body{font-size:14.5px;color:var(--text);margin-top:6px;white-space:pre-wrap;text-wrap:pretty;}
+  .note-phone{
+    display:inline-block;margin-top:9px;font-size:14.5px;color:var(--text);
+    text-decoration:none;border:1px solid var(--border);border-radius:var(--radius-sm);
+    padding:6px 12px;font-variant-numeric:tabular-nums;
+    transition-property:background-color,border-color;transition-duration:150ms;transition-timing-function:ease-out;
+  }
+  .note-phone:hover{background:var(--hover);border-color:var(--text);}
+  .note-actions{display:flex;gap:0;flex-shrink:0;}
+  .note-actions .icon-btn{width:34px;height:34px;min-width:34px;border:none;background:none;}
+
+  /* ---------- categories ---------- */
+  .cat-row-wrap{padding:7px 0;}
+  .cat-row{display:flex;align-items:center;gap:9px;}
+  .cat-dot{width:9px;height:9px;border-radius:99px;flex-shrink:0;}
+  .cat-name{flex:1;font-size:15.5px;text-wrap:pretty;}
+  .cat-amount{font-size:15px;font-variant-numeric:tabular-nums;color:var(--muted);}
+  .cat-bar-track{height:4px;background:var(--subtle);border-radius:99px;margin-top:5px;overflow:hidden;}
+  .cat-bar-fill{height:100%;border-radius:99px;}
+
+  /* ---------- days ---------- */
+  .day-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);margin-bottom:9px;overflow:hidden;}
+  .day-card.today{border-color:var(--a-plan);box-shadow:inset 3px 0 0 var(--a-plan);}
+  .day-card.expanded{border-color:var(--muted);}
+  .day-header-row{display:flex;align-items:stretch;}
+  .day-toggle{
+    flex:1;display:flex;align-items:center;gap:10px;padding:13px 8px 13px 14px;min-width:0;
+    background:none;border:none;text-align:left;cursor:pointer;font-family:inherit;color:inherit;min-height:44px;
+  }
+  .day-date{min-width:52px;white-space:nowrap;line-height:1.2;}
+  .day-date .dd{display:block;font-size:15px;font-weight:600;font-variant-numeric:tabular-nums;letter-spacing:-0.01em;}
+  .day-date .dw{display:block;font-size:12.5px;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;}
+  .today-badge{
+    font-size:12px;background:var(--a-plan-bg);color:var(--a-plan);font-weight:600;
+    padding:2px 8px;border-radius:99px;white-space:nowrap;
+  }
+  .day-label{flex:1;font-size:16px;min-width:0;text-wrap:balance;}
+  .day-total{font-size:15px;font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap;}
+  .day-total.zero{font-weight:400;color:var(--muted);}
+  .chevron{color:var(--muted);transition:transform 200ms ease-out;display:inline-flex;}
+  .day-card.expanded .chevron{transform:rotate(90deg);}
+  .day-actions{display:flex;align-items:center;gap:2px;padding-right:8px;}
+  .day-body{padding:0 14px 14px;display:none;}
+  .day-card.expanded .day-body{display:block;}
+  .sub-head{
+    display:flex;align-items:center;gap:6px;
+    font-size:13px;color:var(--muted);font-weight:600;
+    padding:12px 0 6px;border-top:1px solid var(--border);margin-top:2px;
+    text-transform:uppercase;letter-spacing:0.04em;
+  }
+  .sub-head svg{color:var(--c,var(--muted));}
+
+  /* stops */
+  .stop-item + .stop-item{border-top:1px solid var(--hairline);}
+  .stop-row{display:flex;align-items:center;gap:9px;padding:8px 0;}
+  .stop-map{margin:0 0 10px;border:1px solid var(--border);border-radius:var(--radius-md);overflow:hidden;background:var(--subtle);}
+  .stop-map iframe{display:block;width:100%;height:250px;border:0;}
+  .map-links{display:flex;flex-wrap:wrap;align-items:center;gap:2px 16px;padding:6px 12px;background:var(--surface);}
+  .map-links a,.map-links button{
+    color:var(--a-weather);font-weight:600;text-decoration:none;background:none;border:none;
+    padding:9px 0;font-size:14.5px;font-family:inherit;cursor:pointer;
+  }
+  .map-links button{margin-left:auto;font-weight:400;color:var(--muted);font-size:13.5px;text-decoration:underline;}
+  .map-off{padding:16px 12px;font-size:14.5px;color:var(--muted);line-height:1.5;text-wrap:pretty;}
+  .route-link{margin-left:auto;text-transform:none;letter-spacing:0;font-weight:600;font-size:13.5px;color:var(--a-weather);text-decoration:none;padding:4px 0;}
+  .day-note{padding:6px 0;}
+  .day-note b{font-size:15px;font-weight:600;}
+  .day-note div{font-size:14.5px;color:var(--muted);white-space:pre-wrap;text-wrap:pretty;}
+  .stop-time{font-size:13px;color:var(--muted);min-width:54px;font-variant-numeric:tabular-nums;white-space:nowrap;}
+  .stop-main{flex:1;min-width:0;}
+  .stop-name{font-size:15px;text-wrap:pretty;}
+  .stop-note{font-size:13.5px;color:var(--muted);margin-top:1px;text-wrap:pretty;}
+  .stop-actions{display:flex;gap:0;flex-shrink:0;}
+  .stop-actions .icon-btn{width:34px;height:34px;min-width:34px;border:none;background:none;}
+
+  /* expenses */
+  .expense-row{display:flex;align-items:center;gap:9px;padding:9px 0;}
+  .expense-row + .expense-row{border-top:1px solid var(--hairline);}
+  .expense-cat-pill{font-size:13px;padding:4px 10px;border-radius:99px;white-space:nowrap;}
+  .expense-note{flex:1;font-size:15px;min-width:0;text-wrap:pretty;}
+  .expense-amount{font-size:15px;font-variant-numeric:tabular-nums;white-space:nowrap;}
+  .expense-actions{display:flex;gap:0;flex-shrink:0;}
+  .expense-actions .icon-btn{width:34px;height:34px;min-width:34px;border:none;background:none;}
+
+  .dashed-btn{
+    width:100%;margin-top:8px;padding:9px;border:1px dashed var(--border);border-radius:var(--radius-sm);
+    background:none;color:var(--muted);font-size:14.5px;cursor:pointer;min-height:44px;font-family:inherit;
+    transition-property:border-color,color;transition-duration:150ms;transition-timing-function:ease-out;
+  }
+  .dashed-btn:hover{border-color:var(--text);color:var(--text);}
+  .add-day-btn{
+    width:100%;padding:12px;border:1px dashed var(--border);border-radius:var(--radius-md);
+    background:none;color:var(--muted);font-size:15.5px;cursor:pointer;min-height:44px;font-family:inherit;
+    transition-property:border-color,color;transition-duration:150ms;transition-timing-function:ease-out;
+  }
+  .add-day-btn:hover{border-color:var(--text);color:var(--text);}
+
+  /* ---------- fab ---------- */
+  #fab{
+    position:fixed;right:20px;bottom:24px;width:56px;height:56px;border-radius:99px;
+    background:var(--ink);color:var(--on-ink);border:none;display:flex;align-items:center;justify-content:center;
+    box-shadow:var(--shadow-fab);cursor:pointer;z-index:40;
+    transition-property:transform,background-color;transition-duration:150ms;transition-timing-function:ease-out;
+  }
+  #fab:hover{background:var(--ink-hover);}
+  #fab:active{transform:scale(0.94);}
+
+  /* ---------- overlays ---------- */
+  .overlay{position:fixed;inset:0;background:var(--overlay-bg);display:flex;align-items:flex-end;justify-content:center;z-index:50;}
+  @media(min-width:600px){.overlay{align-items:center;}}
+  .sheet{
+    background:var(--surface);width:100%;max-width:460px;border-radius:18px 18px 0 0;
+    padding:20px 18px calc(20px + env(safe-area-inset-bottom,0px));max-height:88vh;max-height:88dvh;overflow-y:auto;
+  }
+  @media(min-width:600px){.sheet{border-radius:16px;}}
+  .sheet-title{font-family:var(--font-serif);font-size:21px;margin:0 0 16px;}
+  .field{margin-bottom:14px;}
+  .field label{display:block;font-size:13.5px;color:var(--muted);margin-bottom:6px;}
+  .field-hint{font-size:13px;color:var(--muted);margin-top:5px;text-wrap:pretty;}
+  input[type="text"],input[type="date"],select,textarea{
+    font-family:inherit;font-size:16.5px;padding:12px 13px;border:1px solid var(--border);
+    border-radius:var(--radius-sm);background:var(--surface);color:var(--text);width:100%;
+  }
+  .amount-preview{font-size:13.5px;color:var(--muted);margin-top:5px;min-height:16px;}
+  .cat-picker{display:flex;flex-wrap:wrap;gap:7px;}
+  .cat-chip{
+    padding:8px 13px;border-radius:99px;font-size:14.5px;border:1px solid var(--border);background:var(--surface);
+    cursor:pointer;font-family:inherit;color:inherit;
+    transition-property:border-color,transform;transition-duration:150ms;transition-timing-function:ease-out;
+  }
+  .cat-chip.selected{border-color:var(--ink);border-width:1.5px;font-weight:600;}
+  .cat-chip.add-new{border-style:dashed;color:var(--muted);}
+  .new-cat-row{display:flex;gap:8px;margin-top:9px;}
+  .new-cat-row input{flex:1;}
+  .sheet-actions{display:flex;gap:10px;margin-top:18px;}
+  .btn{
+    flex:1;padding:13px;border-radius:var(--radius-sm);font-size:16px;cursor:pointer;font-family:inherit;
+    border:1px solid var(--border);background:var(--surface);color:var(--text);min-height:48px;
+    transition:transform 150ms ease-out;
+  }
+  .btn.primary{background:var(--ink);color:var(--on-ink);border-color:var(--ink);}
+  .btn.primary:hover{background:var(--ink-hover);color:var(--on-ink);}
+  .btn:active{transform:scale(0.98);}
+
+  /* ---------- toast ---------- */
+  #toast-region{position:fixed;left:0;right:0;bottom:92px;display:flex;flex-direction:column;align-items:center;gap:8px;pointer-events:none;z-index:60;}
+  .toast{
+    background:var(--ink);color:var(--on-ink);padding:10px 16px;border-radius:99px;font-size:14.5px;
+    display:flex;align-items:center;gap:10px;pointer-events:auto;box-shadow:var(--shadow-toast);
+    animation:toast-in 200ms ease-out;max-width:90vw;
+  }
+  .toast button{background:none;border:none;color:var(--on-ink);text-decoration:underline;font-size:14.5px;cursor:pointer;padding:0;font-family:inherit;}
+  @keyframes toast-in{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
+
+  /* ---------- footer ---------- */
+  .footer{margin-top:28px;padding-top:16px;border-top:1px solid var(--border);text-align:center;}
+  .offline-status{font-size:14px;line-height:1.55;color:var(--muted);text-align:center;margin:0 auto 10px;max-width:520px;text-wrap:pretty;}
+  .offline-status.ok b{color:var(--ok);}
+  .offline-status.bad b{color:var(--warn);}
+  .footer-actions{display:flex;justify-content:center;gap:6px;flex-wrap:wrap;margin-bottom:6px;}
+  .link-btn{font-size:13.5px;color:var(--muted);background:none;border:none;cursor:pointer;text-decoration:underline;padding:8px;font-family:inherit;}
+  .link-btn:hover{color:var(--text);}
+  .danger-link{font-size:13.5px;color:var(--muted);background:none;border:none;cursor:pointer;text-decoration:underline;padding:8px;font-family:inherit;}
+  .confirm-panel{margin-top:10px;padding:14px;border:1px solid var(--danger-border);background:var(--danger-bg);border-radius:var(--radius-md);font-size:14.5px;color:var(--danger);text-align:left;}
+  .confirm-panel .sheet-actions{margin-top:10px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div id="loading">Đang tải dữ liệu…</div>
+
+  <div id="app-content" hidden>
+    <div class="header">
+      <div class="header-top">
+        <div>
+          <h1 class="trip-name" id="trip-name"></h1>
+          <div class="trip-dates-row">
+            <span class="trip-dates" id="trip-dates"></span>
+            <button class="sync-chip off" id="sync-chip" type="button" aria-label="Đồng bộ với bạn đi cùng"><span class="sync-dot"></span><span id="sync-chip-text">Chưa đồng bộ</span></button>
+          </div>
+        </div>
+        <div class="header-actions">
+          <button class="icon-btn" id="theme-toggle" aria-label="Đổi chế độ sáng tối">
+            <svg id="icon-sun" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+            <svg id="icon-moon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" hidden><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"/></svg>
+          </button>
+          <button class="icon-btn" id="edit-trip-btn" aria-label="Sửa thông tin chuyến đi">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="layout">
+      <aside class="col-side">
+        <section id="summary-block">
+          <div class="hero-card">
+            <div class="hero-label"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 7V5a2 2 0 0 0-2-2H5a2 2 0 0 0 0 4h14a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5"/><path d="M17 12h.01"/></svg>Còn lại</div>
+            <div class="hero-value" id="stat-remain">—</div>
+            <div class="progress-track"><div class="progress-fill" id="progress-fill"></div></div>
+            <div class="pacing-line" id="pacing-line"></div>
+          </div>
+          <div class="stat-stack">
+            <div class="stat-card">
+              <div class="stat-label">Tổng ngân sách</div>
+              <div class="stat-value" id="stat-total">—</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">Đã chi</div>
+              <div class="stat-value" id="stat-spent">—</div>
+            </div>
+          </div>
+        </section>
+
+        <section id="weather-block">
+          <div class="sec"><span class="sec-icon" style="--c:var(--a-weather);--cb:var(--a-weather-bg)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v2M5.6 5.6l1.4 1.4M2 12h2M20 12h2M18.4 5.6 17 7"/><circle cx="12" cy="12" r="3.2"/><path d="M17.5 21H8a4 4 0 0 1-.6-7.96"/><path d="M17.5 21a3 3 0 0 0 0-6 4.5 4.5 0 0 0-8.4-1.6"/></svg></span><span class="sec-text">Thời tiết</span><button class="icon-btn mini-btn" id="weather-refresh" aria-label="Cập nhật thời tiết"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg></button></div>
+          <div class="weather-panel" id="weather-panel"></div>
+        </section>
+
+        <section id="prepaid-block">
+          <div class="sec"><span class="sec-icon" style="--c:var(--a-money);--cb:var(--a-money-bg)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/><path d="M6 15h4"/></svg></span><span class="sec-text">Đã trả trước &amp; đặt cọc</span><button class="icon-btn mini-btn" id="add-prepaid" aria-label="Thêm khoản trả trước"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="M5 12h14"/></svg></button></div>
+          <div id="prepaid-list"></div>
+        </section>
+
+        <section id="cat-section">
+          <div class="sec"><span class="sec-icon" style="--c:var(--a-chart);--cb:var(--a-chart-bg)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><rect x="7" y="12" width="3" height="6"/><rect x="12" y="8" width="3" height="10"/><rect x="17" y="4" width="3" height="14"/></svg></span><span class="sec-text">Theo hạng mục</span></div>
+          <div id="cat-breakdown"></div>
+        </section>
+      </aside>
+
+      <main class="col-main">
+        <section id="days-block">
+          <div class="sec"><span class="sec-icon" style="--c:var(--a-plan);--cb:var(--a-plan-bg)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/><path d="M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01"/></svg></span><span class="sec-text">Lịch trình &amp; chi tiêu theo ngày</span></div>
+          <div id="days-list"></div>
+          <button class="add-day-btn" id="add-day-btn">+ Thêm ngày</button>
+        </section>
+
+        <section id="packing-block">
+          <div class="sec"><span class="sec-icon" style="--c:var(--a-chart);--cb:var(--a-chart-bg)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg></span><span class="sec-text">Đồ mang theo</span><span class="count-chip" id="pack-count"></span><button class="icon-btn mini-btn" id="add-pack" aria-label="Thêm đồ mang theo"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="M5 12h14"/></svg></button></div>
+          <div id="pack-list"></div>
+          <div class="pack-foot"><button class="link-btn" id="pack-reset">Bỏ tick tất cả</button><button class="link-btn" id="pack-clear">Xoá hết danh sách</button></div>
+        </section>
+
+        <section id="outfit-block">
+          <div class="sec"><span class="sec-icon" style="--c:var(--a-note);--cb:var(--a-note-bg)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.38 3.46 16 2a4 4 0 0 1-8 0L3.62 3.46a2 2 0 0 0-1.34 2.23l.58 3.47a1 1 0 0 0 .99.84H6v10c0 1.1.9 2 2 2h8a2 2 0 0 0 2-2V10h2.15a1 1 0 0 0 .99-.84l.58-3.47a2 2 0 0 0-1.34-2.23Z"/></svg></span><span class="sec-text">Trang phục &amp; đồ dùng</span><button class="icon-btn mini-btn" id="add-outfit" aria-label="Thêm ghi chú trang phục"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="M5 12h14"/></svg></button></div>
+          <div id="outfit-list"></div>
+        </section>
+
+        <section id="notes-block">
+          <div class="sec"><span class="sec-icon" style="--c:var(--a-note);--cb:var(--a-note-bg)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/><path d="M8 13h8M8 17h5"/></svg></span><span class="sec-text">Ghi chú &amp; liên hệ</span><button class="icon-btn mini-btn" id="add-note" aria-label="Thêm ghi chú"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="M5 12h14"/></svg></button></div>
+          <div id="notes-list"></div>
+        </section>
+      </main>
+    </div>
+
+    <div class="footer">
+      <div class="offline-status" id="offline-status" aria-live="polite"></div>
+      <div class="footer-actions">
+        <button class="link-btn" id="export-btn">Xuất file sao lưu</button>
+        <button class="link-btn" id="import-trigger">Khôi phục từ file</button>
+        <input type="file" id="import-file" accept="application/json,.json" hidden>
+      </div>
+      <button class="danger-link" id="reset-link">Xoá toàn bộ dữ liệu</button>
+      <div class="confirm-panel" id="reset-confirm" hidden>
+        <span id="reset-confirm-text">Xoá hết dữ liệu chi tiêu và đưa về lịch trình mặc định? Không thể hoàn tác.</span>
+        <div class="sheet-actions">
+          <button class="btn" id="reset-cancel">Huỷ</button>
+          <button class="btn primary" id="reset-confirm-btn">Xoá hết</button>
+        </div>
+      </div>
+      <div class="confirm-panel" id="import-confirm" hidden>
+        <span id="import-confirm-text">Khôi phục sẽ thay thế toàn bộ dữ liệu hiện tại bằng nội dung file này. Tiếp tục?</span>
+        <div class="sheet-actions">
+          <button class="btn" id="import-cancel">Huỷ</button>
+          <button class="btn primary" id="import-confirm-btn">Khôi phục</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<button id="fab" aria-label="Thêm khoản chi" hidden>
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="M5 12h14"/></svg>
+</button>
+
+<!-- sync sheet -->
+<div class="overlay" id="sync-overlay" hidden>
+  <div class="sheet">
+    <h2 class="sheet-title">Đồng bộ với bạn đi cùng</h2>
+    <div id="sync-body"></div>
+    <div class="sheet-actions"><button class="btn" id="sync-close" type="button">Đóng</button></div>
+  </div>
+</div>
+
+<!-- expense modal -->
+<div class="overlay" id="modal-overlay" hidden>
+  <div class="sheet">
+    <h2 class="sheet-title" id="modal-title">Thêm khoản chi</h2>
+    <div class="field">
+      <label for="f-day">Ngày</label>
+      <select id="f-day"></select>
+    </div>
+    <div class="field">
+      <label>Hạng mục</label>
+      <div class="cat-picker" id="cat-picker"></div>
+      <div class="new-cat-row" id="new-cat-row" hidden>
+        <input type="text" id="new-cat-input" placeholder="Tên hạng mục mới">
+        <button class="btn primary" id="new-cat-confirm" type="button">Thêm</button>
+      </div>
+    </div>
+    <div class="field">
+      <label for="f-note">Mô tả</label>
+      <input type="text" id="f-note" placeholder="VD: Ăn trưa, thuê xe máy...">
+    </div>
+    <div class="field">
+      <label for="f-amount">Số tiền (VNĐ)</label>
+      <input type="text" inputmode="numeric" id="f-amount" placeholder="VD: 45000" autocomplete="off">
+      <div class="amount-preview" id="amount-preview"></div>
+    </div>
+    <div class="sheet-actions">
+      <button class="btn" id="modal-close">Huỷ</button>
+      <button class="btn primary" id="modal-save">Lưu</button>
+    </div>
+  </div>
+</div>
+
+<!-- stop modal -->
+<div class="overlay" id="stop-overlay" hidden>
+  <div class="sheet">
+    <h2 class="sheet-title" id="stop-title">Thêm điểm đến</h2>
+    <div class="field">
+      <label for="s-time">Giờ (tuỳ chọn)</label>
+      <input type="text" id="s-time" placeholder="VD: 9:00 hoặc Chiều">
+    </div>
+    <div class="field">
+      <label for="s-name">Tên điểm đến</label>
+      <input type="text" id="s-name" placeholder="VD: Thác Bản Giốc">
+    </div>
+    <div class="field">
+      <label for="s-note">Ghi chú (tuỳ chọn)</label>
+      <input type="text" id="s-note" placeholder="VD: Vé 45k, đi thuyền thêm 50k">
+    </div>
+    <div class="field">
+      <label for="s-coords">Toạ độ (tuỳ chọn)</label>
+      <input type="text" id="s-coords" placeholder="VD: 22.8544,106.7243" autocomplete="off">
+      <div class="field-hint">Có toạ độ thì bản đồ hiện ngay trong app. Bỏ trống thì nút ghim sẽ tìm theo tên điểm đến.</div>
+    </div>
+    <div class="sheet-actions">
+      <button class="btn" id="stop-cancel">Huỷ</button>
+      <button class="btn primary" id="stop-save">Lưu</button>
+    </div>
+  </div>
+</div>
+
+<!-- prepaid modal -->
+<div class="overlay" id="prepaid-overlay" hidden>
+  <div class="sheet">
+    <h2 class="sheet-title" id="prepaid-title">Thêm khoản trả trước</h2>
+    <div class="field">
+      <label for="p-name">Khoản gì</label>
+      <input type="text" id="p-name" placeholder="VD: Cọc homestay Khuổi Ky 2 đêm">
+    </div>
+    <div class="field">
+      <label for="p-total">Tổng tiền phải trả (VNĐ)</label>
+      <input type="text" inputmode="numeric" id="p-total" placeholder="VD: 400000" autocomplete="off">
+      <div class="amount-preview" id="p-total-preview"></div>
+    </div>
+    <div class="field">
+      <label for="p-paid">Đã trả / đã cọc (VNĐ)</label>
+      <input type="text" inputmode="numeric" id="p-paid" placeholder="VD: 100000" autocomplete="off">
+      <div class="amount-preview" id="p-paid-preview"></div>
+      <div class="field-hint">Trả hết rồi thì điền bằng tổng tiền. Phần chênh lệch sẽ được tính là tiền còn phải trả khi tới nơi.</div>
+    </div>
+    <div class="field">
+      <label for="p-note">Ghi chú (tuỳ chọn)</label>
+      <input type="text" id="p-note" placeholder="VD: Chuyển khoản 10/11, mã đặt phòng ABC123">
+    </div>
+    <div class="sheet-actions">
+      <button class="btn" id="prepaid-cancel">Huỷ</button>
+      <button class="btn primary" id="prepaid-save">Lưu</button>
+    </div>
+  </div>
+</div>
+
+<!-- packing modal -->
+<div class="overlay" id="pack-overlay" hidden>
+  <div class="sheet">
+    <h2 class="sheet-title" id="pack-title">Thêm đồ mang theo</h2>
+    <div class="field">
+      <label for="k-text">Đồ gì</label>
+      <input type="text" id="k-text" placeholder="VD: Áo khoác chống nước">
+    </div>
+    <div class="field">
+      <label for="k-group">Nhóm</label>
+      <input type="text" id="k-group" list="pack-groups" placeholder="VD: Quần áo" autocomplete="off">
+      <datalist id="pack-groups"></datalist>
+      <div class="field-hint">Chọn nhóm có sẵn hoặc gõ tên nhóm mới.</div>
+    </div>
+    <div class="sheet-actions">
+      <button class="btn" id="pack-cancel">Huỷ</button>
+      <button class="btn primary" id="pack-save">Lưu</button>
+    </div>
+  </div>
+</div>
+
+<!-- note modal -->
+<div class="overlay" id="note-overlay" hidden>
+  <div class="sheet">
+    <h2 class="sheet-title" id="note-title-label">Thêm ghi chú</h2>
+    <div class="field">
+      <label for="n-kind">Loại ghi chú</label>
+      <select id="n-kind">
+        <option value="outfit">Trang phục &amp; đồ dùng</option>
+        <option value="general">Liên hệ &amp; ghi chú khác</option>
+      </select>
+    </div>
+    <div class="field">
+      <label for="n-title" id="n-title-label">Tiêu đề</label>
+      <input type="text" id="n-title" placeholder="VD: Nhà xe Hà Nội – Cao Bằng">
+    </div>
+    <div class="field">
+      <label for="n-body" id="n-body-label">Nội dung</label>
+      <textarea id="n-body" rows="4" placeholder="VD: Đón tại Nội Bài, phụ thu 200k/xe"></textarea>
+    </div>
+    <div class="field">
+      <label for="n-day">Gắn với ngày (tuỳ chọn)</label>
+      <select id="n-day"></select>
+      <div class="field-hint">Gắn ngày thì ghi chú cũng hiện trong thẻ ngày đó.</div>
+    </div>
+    <div class="field" id="n-phone-field">
+      <label for="n-phone">Số điện thoại (tuỳ chọn)</label>
+      <input type="text" inputmode="tel" id="n-phone" placeholder="VD: 0912345678" autocomplete="off">
+      <div class="field-hint">Có số thì sẽ hiện nút bấm gọi trực tiếp.</div>
+    </div>
+    <div class="sheet-actions">
+      <button class="btn" id="note-cancel">Huỷ</button>
+      <button class="btn primary" id="note-save">Lưu</button>
+    </div>
+  </div>
+</div>
+
+<!-- day edit overlay -->
+<div class="overlay" id="day-edit-overlay" hidden>
+  <div class="sheet">
+    <h2 class="sheet-title">Sửa ngày</h2>
+    <div class="field">
+      <label for="day-edit-date">Ngày</label>
+      <input type="date" id="day-edit-date">
+    </div>
+    <div class="field">
+      <label for="day-edit-label">Ghi chú / điểm đến</label>
+      <input type="text" id="day-edit-label" placeholder="VD: Thác Bản Giốc">
+    </div>
+    <div class="field">
+      <label for="day-edit-region">Khu vực (để lấy thời tiết)</label>
+      <select id="day-edit-region"></select>
+    </div>
+    <div class="sheet-actions">
+      <button class="btn" id="day-edit-cancel">Huỷ</button>
+      <button class="btn primary" id="day-edit-save">Lưu</button>
+    </div>
+  </div>
+</div>
+
+<!-- trip edit overlay -->
+<div class="overlay" id="trip-edit-overlay" hidden>
+  <div class="sheet">
+    <h2 class="sheet-title">Sửa thông tin chuyến đi</h2>
+    <div class="field">
+      <label for="trip-edit-name">Tên chuyến đi</label>
+      <input type="text" id="trip-edit-name">
+    </div>
+    <div class="field">
+      <label for="trip-edit-budget">Tổng ngân sách (VNĐ)</label>
+      <input type="text" inputmode="numeric" id="trip-edit-budget" autocomplete="off">
+    </div>
+    <div class="sheet-actions">
+      <button class="btn" id="trip-edit-cancel">Huỷ</button>
+      <button class="btn primary" id="trip-edit-save">Lưu</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast-region"></div>
+
+<script>
+(function(){
+  var STORAGE_KEY = 'cb-trip-budget-v1';
+  var WEATHER_KEY = 'cb-trip-weather-v1';
+  var THEME_KEY = 'cb-trip-theme-v1';
+
+  var PALETTE_LIGHT = [
+    {bg:'#FBF3DB',fg:'#956400'},{bg:'#E1F3FE',fg:'#1F6C9F'},
+    {bg:'#EDF3EC',fg:'#346538'},{bg:'#FDEBEC',fg:'#9F2F2D'},
+    {bg:'#F0E6F6',fg:'#6B3FA0'},{bg:'#F1F1EF',fg:'#5F5E5B'},
+    {bg:'#FCE8D8',fg:'#A3540B'},{bg:'#E4F5EE',fg:'#1E7A5C'}
+  ];
+  var PALETTE_DARK = [
+    {bg:'#3A3220',fg:'#E3C173'},{bg:'#1E3243',fg:'#8DC5E8'},
+    {bg:'#243021',fg:'#9BCB9F'},{bg:'#3A2321',fg:'#E59B98'},
+    {bg:'#2F2438',fg:'#C4A3E0'},{bg:'#2C2B29',fg:'#B5B2AC'},
+    {bg:'#3A2A1C',fg:'#E0A971'},{bg:'#1F332C',fg:'#87C9AE'}
+  ];
+  function palette(){
+    return document.documentElement.getAttribute('data-theme')==='dark' ? PALETTE_DARK : PALETTE_LIGHT;
+  }
+  var PALETTE = PALETTE_LIGHT; // dùng cho phép chia lấy dư khi tạo hạng mục mới
+
+  // Toạ độ lấy từ Google Places
+  var REGIONS = {
+    'ha-noi':   {name:'Hà Nội',                 lat:21.0287, lng:105.8521},
+    'cao-bang': {name:'TP Cao Bằng',            lat:22.6357, lng:106.2522},
+    'ban-gioc': {name:'Trùng Khánh – Bản Giốc', lat:22.8544, lng:106.7243},
+    'ba-be':    {name:'Hồ Ba Bể',               lat:22.4120, lng:105.6134}
+  };
+
+  var WMO = {
+    0:'Trời quang',1:'Ít mây',2:'Có mây',3:'Nhiều mây',
+    45:'Sương mù',48:'Sương mù đóng băng',
+    51:'Mưa phùn nhẹ',53:'Mưa phùn',55:'Mưa phùn dày',
+    56:'Mưa phùn lạnh',57:'Mưa phùn lạnh dày',
+    61:'Mưa nhẹ',63:'Mưa vừa',65:'Mưa to',
+    66:'Mưa lạnh',67:'Mưa lạnh nặng hạt',
+    71:'Tuyết nhẹ',73:'Tuyết',75:'Tuyết dày',77:'Hạt tuyết',
+    80:'Mưa rào nhẹ',81:'Mưa rào',82:'Mưa rào lớn',
+    85:'Mưa tuyết nhẹ',86:'Mưa tuyết',
+    95:'Dông',96:'Dông kèm mưa đá',99:'Dông mưa đá lớn'
+  };
+
+  function uid(){ return Math.random().toString(36).slice(2,10)+Date.now().toString(36); }
+
+  var SEED_DAYS = [
+    {id:'d1',date:'2026-11-27',label:'Bay + xe khách vào Cao Bằng',region:'cao-bang',stops:[
+      {id:'s101',time:'06:30',name:'Bay Tân Sơn Nhất (T3) → Nội Bài (T1) · VN6004',note:'2h10, hạ cánh 08:40. Economy Lite, ký gửi 1 kiện. Vietnam Airlines xuất vé, Pacific Airlines khai thác.',lat:10.8170,lng:106.6566},
+      {id:'s105',time:'08:40',name:'Hạ cánh Nội Bài (T1)',note:'',lat:21.2178,lng:105.8026},
+      {id:'s102',time:'Trưa',name:'Limousine Hà Nội – Cao Bằng',note:'Khoảng 6–7 tiếng, 350–550k/người',lat:null,lng:null},
+      {id:'s103',time:'Tối',name:'Nhận phòng TP Cao Bằng',note:'Ăn phở chua hoặc phở vịt quay',lat:22.6357,lng:106.2522}
+    ]},
+    {id:'d2',date:'2026-11-28',label:'Pác Bó',region:'cao-bang',stops:[
+      {id:'s201',time:'7:00',name:'Thuê xe máy tại khách sạn',note:'Mang giấy tờ, mặc ấm',lat:null,lng:null},
+      {id:'s202',time:'9:00',name:'Khu di tích Pác Bó',note:'Suối Lê Nin, núi Các Mác, cách TP ~55km',lat:22.9793,lng:106.0534},
+      {id:'s203',time:'Chiều',name:'Về lại TP Cao Bằng',note:'Cả ngày ~110km xe máy',lat:22.6357,lng:106.2522},
+      {id:'s204',time:'Tối',name:'Phố đi bộ Kim Đồng, bánh cuốn canh',note:'Google Maps ghi mở Thứ 6–CN 7h–23h, đóng Thứ 2–5.',lat:22.6641,lng:106.2605}
+    ]},
+    {id:'d3',date:'2026-11-29',label:'Mã Phục – Thang Hen – Ngườm Ngao',region:'ban-gioc',stops:[
+      {id:'s301',time:'7:30',name:'Đèo Mã Phục',note:'Dừng chân chụp ảnh',lat:22.7278,lng:106.3368},
+      {id:'s302',time:'9:00',name:'Hồ Thang Hen',note:'Vé 30k. Tháng 11–12 nước cạn hơn mùa mưa',lat:22.7590,lng:106.2945},
+      {id:'s303',time:'15:00',name:'Động Ngườm Ngao',note:'Mua tour dài 195k, đừng đi tour ngắn 45k',lat:22.8454,lng:106.7058},
+      {id:'s304',time:'Tối',name:'Homestay làng đá Khuổi Ky',note:'Nhà sàn đá người Tày, ~200k/đêm',lat:22.8549,lng:106.7009}
+    ]},
+    {id:'d4',date:'2026-11-30',label:'Thác Bản Giốc',region:'ban-gioc',stops:[
+      {id:'s401',time:'7:30',name:'Thác Bản Giốc',note:'Vé 45k + thuyền tre 50k. Đi sớm lúc vắng',lat:22.8544,lng:106.7243},
+      {id:'s402',time:'9:30',name:'Chùa Phật Tích Trúc Lâm',note:'Trên đồi, nhìn bao quát thác',lat:22.8509,lng:106.7231},
+      {id:'s403',time:'Chiều',name:'Dạo làng đá, mua hạt dẻ',note:'Hạt dẻ Trùng Khánh 120–180k/kg',lat:22.8549,lng:106.7009}
+    ]},
+    {id:'d5',date:'2026-12-01',label:'Di chuyển đến Ba Bể',region:'ba-be',stops:[
+      {id:'s501',time:'8:00',name:'Trả xe máy, rời Trùng Khánh',note:'',lat:null,lng:null},
+      {id:'s502',time:'12:00',name:'Xe khách Cao Bằng – Ba Bể',note:'~106km, khoảng 3 tiếng, 100–250k/người',lat:null,lng:null},
+      {id:'s503',time:'Chiều tối',name:'Homestay bản Pác Ngòi',note:'Nhà sàn ven hồ',lat:22.3886,lng:105.6371}
+    ]},
+    {id:'d6',date:'2026-12-02',label:'Hồ Ba Bể',region:'ba-be',stops:[
+      {id:'s601',time:'8:00',name:'Thuyền quanh hồ Ba Bể',note:'Hỏi giá thuyền ở homestay trước: ước ban đầu 300–400k/thuyền, nhưng một review ghi ~400k/người (khoảng 3 tiếng, gồm đền An Mã và động Puông).',lat:22.4120,lng:105.6134},
+      {id:'s602',time:'10:00',name:'Động Puông',note:'',lat:22.4576,lng:105.6579},
+      {id:'s604',time:'11:00',name:'Thác Đầu Đẳng',note:'Đi bộ khoảng 10 phút từ bến qua rừng. Review lẫn lộn: ghé nếu còn giờ, bỏ được nếu mệt.',lat:22.4523,lng:105.5709},
+      {id:'s603',time:'13:00',name:'Đền An Mã, Ao Tiên',note:'',lat:22.4122,lng:105.6153}
+    ]},
+    {id:'d7',date:'2026-12-03',label:'Về Hà Nội',region:'ha-noi',stops:[
+      {id:'s701',time:'8:00',name:'Xe An Bình Ba Bể – Hà Nội',note:'~170km, khoảng 3–3.5 tiếng',lat:null,lng:null},
+      {id:'s702',time:'14:00',name:'Nhận phòng phố cổ',note:'',lat:21.0287,lng:105.8521},
+      {id:'s703',time:'Tối',name:'Ăn tối phố cổ',note:'Bún chả, chả cá Lã Vọng',lat:null,lng:null}
+    ]},
+    {id:'d8',date:'2026-12-04',label:'Tự do ở Hà Nội',region:'ha-noi',stops:[
+      {id:'s801',time:'Sáng',name:'Hồ Gươm, đền Ngọc Sơn',note:'',lat:21.0287,lng:105.8521},
+      {id:'s802',time:'Chiều',name:'Mua sắm, chuẩn bị hành lý',note:'Ngày đệm dự phòng nếu hôm trước trễ',lat:null,lng:null}
+    ]},
+    {id:'d9',date:'2026-12-05',label:'Còn trống, chưa xếp lịch',region:'ha-noi',stops:[]},
+    {id:'d10',date:'2026-12-06',label:'Bay về Sài Gòn',region:'ha-noi',stops:[
+      {id:'s1001',time:'09:20',name:'Bay Nội Bài (T1) → Tân Sơn Nhất (T3) · VN6005',note:'2h15, hạ cánh 11:35. Economy Super Lite: 0 kiện ký gửi miễn phí, đã mua thêm 1 kiện 23kg (158cm) mỗi người, không hoàn.',lat:21.2178,lng:105.8026},
+      {id:'s1002',time:'11:35',name:'Hạ cánh Tân Sơn Nhất (T3)',note:'',lat:10.8170,lng:106.6566}
+    ]}
+  ];
+
+  // Số tiền vé thực tế theo phiếu thu (không chứa tên, mã đặt chỗ hay số vé: các thông tin đó nằm trong file riêng)
+  var SEED_PREPAID = [
+    {id:'pp-flight-out',name:'Vé bay SGN → HAN, 27/11 (2 người)',total:3098362,paid:3098362,note:'VN6004, 06:30'},
+    {id:'pp-flight-back',name:'Vé bay HAN → SGN, 06/12 (2 người)',total:1830362,paid:1830362,note:'VN6005, 09:20'},
+    {id:'pp-bag-back',name:'Hành lý ký gửi 23kg chiều về (2 người)',total:756000,paid:756000,note:'Không hoàn'}
+  ];
+
+  var SEED_PACKING = [
+    ['Quần áo','Áo giữ nhiệt (2–3 cái)'],
+    ['Quần áo','Áo khoác dày cho sáng sớm và đêm'],
+    ['Quần áo','Áo khoác chắn gió/chống nước để đi xe máy'],
+    ['Quần áo','Quần dài (tránh quần short)'],
+    ['Quần áo','Găng tay và khăn quàng cổ'],
+    ['Quần áo','Tất dày'],
+    ['Quần áo','Giày bám tốt (hang, thác, đường ướt)'],
+    ['Quần áo','Dép quai hậu'],
+    ['Quần áo','Đồ ngủ ấm'],
+    ['Quần áo','Áo mưa'],
+    ['Giấy tờ & tiền','CCCD hoặc hộ chiếu'],
+    ['Giấy tờ & tiền','Bằng lái xe máy (để thuê xe)'],
+    ['Giấy tờ & tiền','Vé/mã đặt chỗ máy bay'],
+    ['Giấy tờ & tiền','Tiền mặt dự phòng, gồm phần còn phải trả khi tới nơi'],
+    ['Điện tử','Sạc và cáp'],
+    ['Điện tử','Sạc dự phòng'],
+    ['Điện tử','Tải bản đồ offline Cao Bằng và Ba Bể trên Google Maps'],
+    ['Điện tử','Giá đỡ điện thoại cho xe máy'],
+    ['Thuốc & cá nhân','Thuốc cá nhân, thuốc say xe, băng cá nhân'],
+    ['Thuốc & cá nhân','Kem chống nắng, son dưỡng môi'],
+    ['Thuốc & cá nhân','Khẩu trang hoặc khăn che bụi'],
+    ['Thuốc & cá nhân','Đồ vệ sinh cá nhân'],
+    ['Khác','Túi/bọc chống nước cho điện thoại'],
+    ['Khác','Đèn pin hoặc đèn đội đầu']
+  ];
+  function seedPacking(){
+    return SEED_PACKING.map(function(x,i){
+      return {id:'k'+String(i+1).padStart(2,'0'),group:x[0],text:x[1],done:false};
+    });
+  }
+
+  // Cập nhật seed 1 lần cho dữ liệu đã lưu: chỉ điền chỗ còn trống, không đè phần bạn đã sửa
+  function findStop(s,id){
+    for(var i=0;i<s.days.length;i++){
+      var st=s.days[i].stops||[];
+      for(var j=0;j<st.length;j++){ if(st[j].id===id) return {day:s.days[i],stop:st[j],idx:j}; }
+    }
+    return null;
+  }
+  var PATCHES = [
+    {id:'v3-places-wear', run:function(s){
+      var f;
+      // toạ độ + tên chỉ đổi khi còn nguyên như bản seed cũ
+      f=findStop(s,'s204');
+      if(f){
+        if(f.stop.name==='Chợ đêm, bánh cuốn canh') f.stop.name='Phố đi bộ Kim Đồng, bánh cuốn canh';
+        if(f.stop.lat==null&&f.stop.lng==null){ f.stop.lat=22.6641; f.stop.lng=106.2605; }
+        if(!f.stop.note) f.stop.note='Google Maps ghi mở Thứ 6–CN 7h–23h, đóng Thứ 2–5.';
+      }
+      f=findStop(s,'s602');
+      if(f){
+        if(f.stop.name==='Động Puông, thác Đầu Đẳng') f.stop.name='Động Puông';
+        if(f.stop.lat==null&&f.stop.lng==null){ f.stop.lat=22.4576; f.stop.lng=105.6579; }
+      }
+      f=findStop(s,'s603');
+      if(f && f.stop.lat==null && f.stop.lng==null){ f.stop.lat=22.4122; f.stop.lng=105.6153; }
+      f=findStop(s,'s601');
+      if(f && f.stop.note==='~300–400k/thuyền, chia đôi'){
+        f.stop.note='Hỏi giá thuyền ở homestay trước: ước ban đầu 300–400k/thuyền, nhưng một review ghi ~400k/người (khoảng 3 tiếng, gồm đền An Mã và động Puông).';
+      }
+      // điểm mới: thác Đầu Đẳng (thêm đúng 1 lần, xoá đi sẽ không tự hiện lại)
+      var d6=null;
+      for(var i=0;i<s.days.length;i++){ if(s.days[i].id==='d6') d6=s.days[i]; }
+      if(d6 && Array.isArray(d6.stops) && !findStop(s,'s604')){
+        var seed=null;
+        SEED_DAYS.forEach(function(sd){ sd.stops.forEach(function(ss){ if(ss.id==='s604') seed=ss; }); });
+        if(seed){
+          var at=-1;
+          for(var j=0;j<d6.stops.length;j++){ if(d6.stops[j].id==='s602') at=j; }
+          var copy=JSON.parse(JSON.stringify(seed));
+          if(at>=0) d6.stops.splice(at+1,0,copy); else d6.stops.push(copy);
+        }
+      }
+    }},
+    // v4: bỏ mọi gợi ý trang phục do app tự thêm. Chỗ này để bạn tự ghi trong mục "Trang phục & đồ dùng".
+    // Chỉ xoá đúng chữ mẫu cũ; nếu bạn đã tự sửa thì giữ lại và chuyển vào ghi chú của điểm đó.
+    {id:'v4-own-notes', run:function(s){
+      var LEGACY_WEAR = {
+      s102:'Để áo khoác dày trong túi xách tay, đừng gửi vào hành lý.',
+      s103:'Tối ở Cao Bằng có thể chỉ 10–15°C: mặc khoác dày ngay khi xuống xe.',
+      s201:'Găng tay, khăn che cổ, áo khoác chắn gió. Chụp ảnh xe và kiểm tra phanh, đèn lúc nhận.',
+      s202:'Giày bám tốt vì đi bộ ven suối; quần áo kín đáo khi vào khu di tích.',
+      s204:'Ngoài trời buổi tối khá lạnh: khoác dày, khăn.',
+      s301:'Gió lớn trên đèo: khoác chắn gió, găng tay.',
+      s302:'Hồ ở độ cao khoảng 1.000m, lạnh hơn dưới thành phố: mang khoác dày.',
+      s303:'Giày bám tốt (hang ẩm, nền trơn), đèn pin hoặc đèn điện thoại, thêm một lớp áo mỏng.',
+      s304:'Nhà sàn về đêm lạnh: tất dày, đồ ngủ ấm; sạc đầy pin điện thoại.',
+      s401:'Đi thuyền tre sát chân thác: giày/dép bám tốt, áo mưa hoặc khoác chống nước, bọc điện thoại chống nước.',
+      s402:'Quần áo kín đáo khi vào chùa; giày dễ cởi.',
+      s503:'Ven hồ ẩm và lạnh về đêm, sáng sớm: khoác dày, tất dày.',
+      s601:'Sáng sớm trên hồ có gió lạnh: khoác chắn gió, găng nhẹ; giày bám tốt khi lên bờ.',
+      s602:'Đèn điện thoại; nền hang có thể ướt nên mang giày bám tốt.',
+      s604:'Giày đi bộ: đường rừng có bậc.',
+      s603:'Quần áo kín đáo và giày dễ cởi khi vào đền.'
+    };
+      (s.days||[]).forEach(function(day){
+        (day.stops||[]).forEach(function(st){
+          if(st.wear===undefined) return;
+          var w=String(st.wear||'').trim();
+          if(w && w!==LEGACY_WEAR[st.id]){
+            st.note = st.note ? (st.note+' · '+w) : w;
+          }
+          delete st.wear;
+        });
+      });
+    }},
+    // v5: đã chốt vé máy bay. Chiều về là 06/12 (không phải 05/12) nên thêm ngày 06/12 và để 05/12 trống.
+    // Chỉ sửa chỗ còn nguyên như seed cũ; phần bạn đã tự sửa thì giữ nguyên.
+    {id:'v5-flights', run:function(s){
+      function seedStop(id){
+        var out=null;
+        SEED_DAYS.forEach(function(sd){ sd.stops.forEach(function(ss){ if(ss.id===id) out=ss; }); });
+        return out ? JSON.parse(JSON.stringify(out)) : null;
+      }
+      function dayById(id){
+        for(var i=0;i<s.days.length;i++){ if(s.days[i].id===id) return s.days[i]; }
+        return null;
+      }
+      // ngày 1: chuyến bay đi
+      var f=findStop(s,'s101');
+      if(f && f.stop.name==='Sân bay Nội Bài' && f.stop.note==='Bay SGN–HAN, nên chọn chuyến trước 8h'){
+        var n101=seedStop('s101'), n105=seedStop('s105');
+        f.stop.time=n101.time; f.stop.name=n101.name; f.stop.note=n101.note; f.stop.lat=n101.lat; f.stop.lng=n101.lng;
+        if(n105 && !findStop(s,'s105')) f.day.stops.splice(f.idx+1,0,n105);
+      }
+      // ngày 05/12 -> trống, thêm ngày 06/12
+      var d9=dayById('d9');
+      var has6=s.days.some(function(d){ return d.id==='d10' || d.date==='2026-12-06'; });
+      if(!has6){
+        var sd10=null;
+        SEED_DAYS.forEach(function(d){ if(d.id==='d10') sd10=d; });
+        if(sd10) s.days.push(JSON.parse(JSON.stringify(sd10)));
+      }
+      if(d9 && d9.date==='2026-12-05' && d9.label==='Bay về Sài Gòn'){
+        d9.label='Còn trống, chưa xếp lịch';
+        d9.stops=(d9.stops||[]).filter(function(st){ return !(st.id==='s901' && st.name==='Ra sân bay Nội Bài' && !st.note); });
+      }
+      // khoản trả trước: không thêm trùng nếu bạn đã tự nhập vé máy bay
+      var hasFlightEntry=s.prepaid.some(function(p){ return /máy bay|vé bay/i.test(p.name||''); });
+      if(hasFlightEntry){
+        s.notice='dupe-flight';
+      } else {
+        SEED_PREPAID.forEach(function(p){
+          var exists=s.prepaid.some(function(x){ return x.id===p.id; });
+          if(!exists) s.prepaid.push(JSON.parse(JSON.stringify(p)));
+        });
+      }
+    }}
+  ];
+  function applyPatches(s){
+    if(!Array.isArray(s.patches)) s.patches=[];
+    var todo=PATCHES.filter(function(p){ return s.patches.indexOf(p.id)<0; });
+    if(!todo.length) return;
+    var pre = sync.room ? snapHashes(s) : null;
+    todo.forEach(function(p){
+      try{ p.run(s); }catch(e){}
+      s.patches.push(p.id);
+    });
+    if(pre){
+      // mục nào chỉ đổi do bản vá (đã đồng bộ trước đó): tăng _u lên 1 để mọi máy cùng vá ra cùng kết quả,
+      // không đè lên bản sửa mới hơn của người khác
+      var post=snapHashes(s);
+      eachIn(s,function(c,id,it){
+        var key=c+':'+id, m=sync.meta[key];
+        if(m && pre[key]!==undefined && pre[key]!==post[key] && m.sh===pre[key]){ it._u=(it._u||0)+1; m.sh=post[key]; }
+      });
+    }
+  }
+
+  function defaultState(){
+    return {
+      trip:{name:'Cao Bằng – Ba Bể', budget:19000000},
+      categories:[
+        {id:'an-uong',name:'Ăn uống',color:0},
+        {id:'di-chuyen',name:'Di chuyển',color:1},
+        {id:'cho-o',name:'Chỗ ở',color:2},
+        {id:'ve-tham-quan',name:'Vé tham quan',color:3},
+        {id:'mua-sam',name:'Mua sắm',color:4},
+        {id:'khac',name:'Khác',color:5}
+      ],
+      days: JSON.parse(JSON.stringify(SEED_DAYS)),
+      expenses:[],
+      prepaid: JSON.parse(JSON.stringify(SEED_PREPAID)),
+      notes:[],
+      packing: seedPacking(),
+      patches: PATCHES.map(function(p){ return p.id; }),
+      expandedDays:['d1']
+    };
+  }
+
+  // giữ nguyên dữ liệu cũ, chỉ bổ sung field mới
+  function migrate(s){
+    if(!s.trip) s.trip = defaultState().trip;
+    if(!s.categories) s.categories = defaultState().categories;
+    if(!s.expenses) s.expenses = [];
+    if(!Array.isArray(s.prepaid)) s.prepaid = [];
+    if(!Array.isArray(s.notes)) s.notes = [];
+    s.notes.forEach(function(n){ if(n.kind!=='outfit') n.kind='general'; });
+    if(!Array.isArray(s.packing)) s.packing = seedPacking();
+    if(!s.expandedDays) s.expandedDays = [];
+    if(!s.days) s.days = [];
+    var seedById = {};
+    SEED_DAYS.forEach(function(d){ seedById[d.id]=d; });
+    s.days.forEach(function(d){
+      if(!Array.isArray(d.stops)){
+        d.stops = seedById[d.id] ? JSON.parse(JSON.stringify(seedById[d.id].stops)) : [];
+      }
+      if(!d.region){
+        d.region = seedById[d.id] ? seedById[d.id].region : 'cao-bang';
+      }
+    });
+    applyPatches(s);
+    return s;
+  }
+
+  var state=null, editingExpenseId=null, editingDayId=null, selectedCategory=null;
+  var editingStopDayId=null, editingStopId=null;
+  var editingPrepaidId=null, editingNoteId=null, editingPackId=null;
+  var weatherCache=null;
+
+  function loadState(){
+    try{
+      var raw = localStorage.getItem(STORAGE_KEY);
+      if(raw) return migrate(JSON.parse(raw));
+    }catch(e){}
+    return null;
+  }
+  function persistLocal(){
+    try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+    catch(e){ showToast('Lỗi khi lưu dữ liệu'); }
+  }
+  function saveState(){ persistLocal(); scheduleTick(); }
+  function loadWeatherCache(){
+    try{
+      var raw = localStorage.getItem(WEATHER_KEY);
+      if(raw) return JSON.parse(raw);
+    }catch(e){}
+    return null;
+  }
+  function saveWeatherCache(){
+    try{ localStorage.setItem(WEATHER_KEY, JSON.stringify(weatherCache)); }catch(e){}
+  }
+
+  function formatVND(n){ return (Math.round(Number(n)||0)).toLocaleString('vi-VN')+' đ'; }
+  function parseAmountInput(str){
+    var d = String(str||'').replace(/[^0-9]/g,'');
+    return d ? parseInt(d,10) : 0;
+  }
+  function todayStr(){
+    var d=new Date();
+    return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+  }
+  function formatDateShort(iso){
+    var d=new Date(iso+'T00:00:00');
+    if(isNaN(d.getTime())) return iso;
+    var names=['CN','T2','T3','T4','T5','T6','T7'];
+    return names[d.getDay()]+' '+String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0');
+  }
+  function escapeHtml(s){
+    return String(s==null?'':s).replace(/[&<>"']/g,function(c){
+      return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+    });
+  }
+
+  var ICON_EDIT='<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>';
+  var ICON_TRASH='<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>';
+  var ICON_PIN='<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>';
+
+  var ICO_PIN_S='<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>';
+  var ICO_RECEIPT_S='<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 2v20l2-1.5L8 22l2-1.5L12 22l2-1.5L16 22l2-1.5L20 22V2l-2 1.5L16 2l-2 1.5L12 2l-2 1.5L8 2 6 3.5Z"/><path d="M8 8h8M8 12h5"/></svg>';
+  var ICO_CLOUD_S='<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.5 19H8a4.5 4.5 0 0 1 .6-8.97 6 6 0 0 1 11.3 2.2A3.5 3.5 0 0 1 17.5 19Z"/></svg>';
+
+  var ICO_SHIRT_S='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.38 3.46 16 2a4 4 0 0 1-8 0L3.62 3.46a2 2 0 0 0-1.34 2.23l.58 3.47a1 1 0 0 0 .99.84H6v10c0 1.1.9 2 2 2h8a2 2 0 0 0 2-2V10h2.15a1 1 0 0 0 .99-.84l.58-3.47a2 2 0 0 0-1.34-2.23Z"/></svg>';
+  var ICO_MAP='<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"/><line x1="9" x2="9" y1="3" y2="18"/><line x1="15" x2="15" y1="6" y2="21"/></svg>';
+  var ICO_CHECK='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 7"/></svg>';
+  var ICO_NOTE_S='<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/><path d="M8 13h8M8 17h5"/></svg>';
+
+  var MAP_PROV_KEY='cb-trip-mapprov-v1';
+  function mapProvider(){
+    try{ return localStorage.getItem(MAP_PROV_KEY)==='osm' ? 'osm' : 'google'; }catch(e){ return 'google'; }
+  }
+  function hasCoords(st){ return st && st.lat!=null && st.lng!=null && !isNaN(st.lat) && !isNaN(st.lng); }
+  function mapEmbedUrl(st, provider){
+    var lat=Number(st.lat), lng=Number(st.lng);
+    if(provider==='osm'){
+      var d=0.012;
+      var bbox=[lng-d,lat-d,lng+d,lat+d].map(function(n){return n.toFixed(5);}).join('%2C');
+      return 'https://www.openstreetmap.org/export/embed.html?bbox='+bbox+'&layer=mapnik&marker='+lat+'%2C'+lng;
+    }
+    return 'https://maps.google.com/maps?q='+lat+','+lng+'&z=14&output=embed&hl=vi';
+  }
+  function directionsUrl(st){
+    return 'https://www.google.com/maps/dir/?api=1&destination='+encodeURIComponent(st.lat+','+st.lng);
+  }
+  // lộ trình cả ngày: các điểm có toạ độ theo thứ tự, tối đa 10 điểm
+  function dayRouteUrl(day){
+    var pts=(day.stops||[]).filter(hasCoords).map(function(st){ return st.lat+','+st.lng; });
+    var uniq=[]; pts.forEach(function(x,i){ if(i===0||x!==pts[i-1]) uniq.push(x); });
+    if(uniq.length<2) return null;
+    uniq=uniq.slice(0,10);
+    var url='https://www.google.com/maps/dir/?api=1&origin='+encodeURIComponent(uniq[0])
+           +'&destination='+encodeURIComponent(uniq[uniq.length-1]);
+    if(uniq.length>2) url+='&waypoints='+encodeURIComponent(uniq.slice(1,-1).join('|'));
+    return url;
+  }
+
+  function mapsUrl(stop){
+    var q = (stop.lat!=null && stop.lng!=null) ? (stop.lat+','+stop.lng) : stop.name;
+    return 'https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(q);
+  }
+
+  function catInfo(catId){
+    var pal=palette();
+    var c=null;
+    for(var i=0;i<state.categories.length;i++){ if(state.categories[i].id===catId){c=state.categories[i];break;} }
+    if(!c) return {name:'Khác',bg:pal[5].bg,fg:pal[5].fg};
+    var p=pal[c.color%pal.length];
+    return {name:c.name,bg:p.bg,fg:p.fg};
+  }
+  function sortedDays(){
+    return state.days.slice().sort(function(a,b){ return a.date<b.date?-1:(a.date>b.date?1:0); });
+  }
+  function dayExpenses(id){ return state.expenses.filter(function(e){return e.dayId===id;}); }
+  function dayTotal(id){ return dayExpenses(id).reduce(function(s,e){return s+e.amount;},0); }
+  function grandTotal(){ return state.expenses.reduce(function(s,e){return s+e.amount;},0); }
+  function prepaidPaid(){ return state.prepaid.reduce(function(s,p){return s+(p.paid||0);},0); }
+  function prepaidCommitted(){ return state.prepaid.reduce(function(s,p){return s+(p.total||0);},0); }
+  function outstanding(){ return Math.max(0, prepaidCommitted()-prepaidPaid()); }
+  function defaultDayId(){
+    var t=todayStr();
+    for(var i=0;i<state.days.length;i++){ if(state.days[i].date===t) return state.days[i].id; }
+    var d=sortedDays();
+    return d.length?d[0].id:'';
+  }
+
+  // ---------- WEATHER ----------
+  function forecastFor(regionKey, dateStr){
+    if(!weatherCache || !weatherCache.data || !weatherCache.data[regionKey]) return null;
+    var r = weatherCache.data[regionKey];
+    var idx = r.dates.indexOf(dateStr);
+    if(idx<0) return null;
+    return {
+      code:r.codes[idx], max:r.max[idx], min:r.min[idx], rain:r.rain[idx]
+    };
+  }
+
+  async function fetchWeather(manual){
+    var keys = Object.keys(REGIONS);
+    var lats = keys.map(function(k){return REGIONS[k].lat;}).join(',');
+    var lngs = keys.map(function(k){return REGIONS[k].lng;}).join(',');
+    var url = 'https://api.open-meteo.com/v1/forecast'
+      + '?latitude='+lats+'&longitude='+lngs
+      + '&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max'
+      + '&timezone=Asia%2FBangkok&forecast_days=16';
+    try{
+      var res = await fetch(url);
+      if(!res.ok) throw new Error('HTTP '+res.status);
+      var json = await res.json();
+      var arr = Array.isArray(json) ? json : [json];
+      var data = {};
+      keys.forEach(function(k,i){
+        var item = arr[i];
+        if(!item || !item.daily) return;
+        data[k] = {
+          dates:item.daily.time,
+          codes:item.daily.weather_code,
+          max:item.daily.temperature_2m_max,
+          min:item.daily.temperature_2m_min,
+          rain:item.daily.precipitation_probability_max
+        };
+      });
+      weatherCache = {fetchedAt:Date.now(), data:data};
+      saveWeatherCache();
+      renderWeather(); renderDays();
+      if(manual) showToast('Đã cập nhật thời tiết');
+    }catch(e){
+      renderWeather();
+      if(manual) showToast('Không lấy được dự báo (cần có mạng)');
+    }
+  }
+
+  function activeRegionKey(){
+    var t=todayStr(), days=sortedDays();
+    for(var i=0;i<days.length;i++){ if(days[i].date>=t) return days[i].region; }
+    return days.length ? days[days.length-1].region : 'cao-bang';
+  }
+
+  function renderWeather(){
+    var panel = document.getElementById('weather-panel');
+    var key = activeRegionKey();
+    var region = REGIONS[key] || REGIONS['cao-bang'];
+    var days = sortedDays();
+    var firstDate = days.length ? days[0].date : null;
+    var html = '<div class="weather-region">Tại '+escapeHtml(region.name)+'</div>';
+
+    var todayFc = forecastFor(key, todayStr());
+    var tripFc = firstDate ? forecastFor(key, firstDate) : null;
+    var shown = todayFc || tripFc;
+    var shownLabel = todayFc ? 'hôm nay' : (tripFc ? 'ngày đầu chuyến' : null);
+
+    if(shown){
+      html += '<div class="weather-now">'+Math.round(shown.min)+'° – '+Math.round(shown.max)+'°</div>';
+      html += '<div class="weather-desc">'+escapeHtml(WMO[shown.code]||'Không rõ')
+            + (shown.rain!=null ? ' · khả năng mưa '+shown.rain+'%' : '')
+            + ' ('+shownLabel+')</div>';
+    } else {
+      html += '<div class="weather-desc">Chưa có dự báo cho khu vực này.</div>';
+    }
+
+    if(firstDate){
+      var start=new Date(firstDate+'T00:00:00'), now=new Date(); now.setHours(0,0,0,0);
+      var diff=Math.round((start-now)/86400000);
+      if(diff>16){
+        html += '<div class="weather-meta">Còn '+diff+' ngày nữa mới khởi hành. Dự báo chỉ có trong 16 ngày tới, các ngày trong chuyến sẽ tự hiện khi đến gần. Cuối tháng 11 ở Cao Bằng thường khô ráo, ban ngày 18–24°C, sáng sớm và đêm 10–15°C, vùng cao lạnh hơn.</div>';
+      } else if(diff>0){
+        html += '<div class="weather-meta">Còn '+diff+' ngày nữa khởi hành.</div>';
+      }
+    }
+    if(weatherCache && weatherCache.fetchedAt){
+      var d=new Date(weatherCache.fetchedAt);
+      html += '<div class="weather-meta">Cập nhật lúc '+String(d.getHours()).padStart(2,'0')+':'
+            + String(d.getMinutes()).padStart(2,'0')+' ngày '+String(d.getDate()).padStart(2,'0')+'/'
+            + String(d.getMonth()+1).padStart(2,'0')+'.</div>';
+    } else {
+      html += '<div class="weather-meta">Chưa tải được dự báo. Bấm nút làm mới khi có mạng.</div>';
+    }
+    panel.innerHTML = html;
+  }
+
+  // ---------- RENDER ----------
+  function render(){ renderHeader(); renderSummary(); renderWeather(); renderPrepaid(); renderPacking(); renderNotes(); renderCategoryBreakdown(); renderDays(); }
+
+  function renderHeader(){
+    document.getElementById('trip-name').textContent=state.trip.name;
+    var days=sortedDays();
+    document.getElementById('trip-dates').textContent = days.length
+      ? formatDateShort(days[0].date)+' – '+formatDateShort(days[days.length-1].date)
+      : 'Chưa có ngày nào';
+  }
+
+  function renderSummary(){
+    var total=state.trip.budget;
+    var daily=grandTotal(), upfront=prepaidPaid(), due=outstanding();
+    var spent=daily+upfront, remain=total-spent, free=remain-due;
+    document.getElementById('stat-total').textContent=formatVND(total);
+    document.getElementById('stat-spent').textContent=formatVND(spent);
+    var pct= total>0 ? Math.min(100,(spent/total)*100) : 0;
+    var rEl=document.getElementById('stat-remain');
+    rEl.textContent=formatVND(remain);
+    rEl.classList.toggle('danger',remain<0);
+    rEl.classList.toggle('warn',remain>=0 && pct>85);
+
+    var fill=document.getElementById('progress-fill');
+    fill.style.width=pct+'%';
+    fill.style.background = spent>total ? 'var(--danger)' : (pct>85?'var(--warn)':'var(--a-money)');
+
+    var today=new Date(); today.setHours(0,0,0,0);
+    var days=sortedDays();
+    var left=days.filter(function(d){ return new Date(d.date+'T00:00:00').getTime()>=today.getTime(); });
+    var p=document.getElementById('pacing-line');
+    var txt='';
+    if(!days.length) txt='';
+    else if(!left.length) txt='Chuyến đi đã kết thúc.';
+    else if(free<=0) txt='Còn '+left.length+' ngày · đã hết phần ngân sách tự do.';
+    else txt='Còn '+left.length+' ngày · khoảng '+formatVND(free/left.length)+'/ngày.';
+    if(due>0 && left.length) txt+=' Đã trừ '+formatVND(due)+' còn phải trả cho các khoản đã đặt.';
+    p.textContent=txt;
+  }
+
+  function renderPrepaid(){
+    var wrap=document.getElementById('prepaid-list'); wrap.innerHTML='';
+    if(!state.prepaid.length){
+      wrap.innerHTML='<p class="empty-hint">Chưa ghi khoản nào. Dùng cho vé máy bay, cọc nhà nghỉ, cọc xe — tiền trả trước chuyến đi.</p>';
+      return;
+    }
+    var card=document.createElement('div'); card.className='pp-card';
+    state.prepaid.forEach(function(p){
+      var rest=Math.max(0,(p.total||0)-(p.paid||0));
+      var sub = rest>0
+        ? 'Đã trả '+formatVND(p.paid||0)+' · <span class="due">còn '+formatVND(rest)+'</span>'
+        : '<span class="done">Đã trả đủ</span>';
+      if(p.note) sub+=' · '+escapeHtml(p.note);
+      var row=document.createElement('div'); row.className='pp-row';
+      row.innerHTML=
+        '<span class="pp-main"><span class="pp-name">'+escapeHtml(p.name||'')+'</span>'
+        +'<div class="pp-sub">'+sub+'</div></span>'
+        +'<span class="pp-actions">'
+          +'<button class="icon-btn" data-action="edit-prepaid" data-id="'+p.id+'" aria-label="Sửa">'+ICON_EDIT+'</button>'
+          +'<button class="icon-btn danger" data-action="delete-prepaid" data-id="'+p.id+'" aria-label="Xoá">'+ICON_TRASH+'</button>'
+        +'</span>';
+      card.appendChild(row);
+    });
+    var due=outstanding();
+    var foot=document.createElement('div'); foot.className='pp-footer';
+    foot.innerHTML='<span>Đã trả trước</span><span>'+formatVND(prepaidPaid())+'</span>';
+    card.appendChild(foot);
+    if(due>0){
+      var foot2=document.createElement('div'); foot2.className='pp-footer due';
+      foot2.innerHTML='<span>Còn phải trả khi tới nơi</span><span>'+formatVND(due)+'</span>';
+      card.appendChild(foot2);
+    }
+    wrap.appendChild(card);
+  }
+
+  function noteKind(n){ return n && n.kind==='outfit' ? 'outfit' : 'general'; }
+  function noteCardEl(n){
+    var card=document.createElement('div'); card.className='note-card';
+    var html='<div class="note-top"><span class="note-title">'+escapeHtml(n.title||'')+'</span>'
+      +'<span class="note-actions">'
+        +'<button class="icon-btn" data-action="edit-note" data-id="'+n.id+'" aria-label="Sửa">'+ICON_EDIT+'</button>'
+        +'<button class="icon-btn danger" data-action="delete-note" data-id="'+n.id+'" aria-label="Xoá">'+ICON_TRASH+'</button>'
+      +'</span></div>';
+    if(n.body) html+='<div class="note-body">'+escapeHtml(n.body)+'</div>';
+    var linkedDay = n.dayId ? findDay(n.dayId) : null;
+    if(linkedDay) html+='<div><span class="note-tag">'+escapeHtml(formatDateShort(linkedDay.date)+' · '+(linkedDay.label||''))+'</span></div>';
+    if(n.phone) html+='<a class="note-phone" href="tel:'+escapeHtml(String(n.phone).replace(/[^0-9+]/g,''))+'">'+escapeHtml(n.phone)+'</a>';
+    card.innerHTML=html;
+    return card;
+  }
+  function renderNotes(){
+    var cfg=[
+      {kind:'outfit', id:'outfit-list', empty:'Chưa có ghi chú nào. Bấm + để ghi: nơi nào, mặc hoặc mang gì.'},
+      {kind:'general', id:'notes-list', empty:'Chưa có ghi chú. Hợp để lưu mã đặt phòng, số điện thoại nhà xe, biển số xe thuê — những thứ cần tra lúc mất sóng.'}
+    ];
+    cfg.forEach(function(c){
+      var wrap=document.getElementById(c.id); wrap.innerHTML='';
+      var list=state.notes.filter(function(n){ return noteKind(n)===c.kind; });
+      if(!list.length){ wrap.innerHTML='<p class="empty-hint">'+c.empty+'</p>'; return; }
+      list.forEach(function(n){ wrap.appendChild(noteCardEl(n)); });
+    });
+  }
+
+  function renderCategoryBreakdown(){
+    var wrap=document.getElementById('cat-breakdown'); wrap.innerHTML='';
+    var totals={};
+    state.expenses.forEach(function(e){ totals[e.category]=(totals[e.category]||0)+e.amount; });
+    var entries=Object.keys(totals).map(function(k){return [k,totals[k]];});
+    entries.sort(function(a,b){return b[1]-a[1];});
+    if(!entries.length){ wrap.innerHTML='<p class="empty-hint">Chưa có khoản chi nào được ghi.</p>'; return; }
+    var max=entries[0][1];
+    entries.forEach(function(pair){
+      var info=catInfo(pair[0]), amount=pair[1];
+      var row=document.createElement('div'); row.className='cat-row-wrap';
+      row.innerHTML='<div class="cat-row">'
+        +'<span class="cat-dot" style="background:'+info.fg+'"></span>'
+        +'<span class="cat-name">'+escapeHtml(info.name)+'</span>'
+        +'<span class="cat-amount">'+formatVND(amount)+'</span></div>'
+        +'<div class="cat-bar-track"><div class="cat-bar-fill" style="width:'+(amount/max*100).toFixed(1)+'%;background:'+info.fg+'"></div></div>';
+      wrap.appendChild(row);
+    });
+  }
+
+  function renderDays(){
+    var wrap=document.getElementById('days-list'); wrap.innerHTML='';
+    var days=sortedDays();
+    if(!days.length){ wrap.innerHTML='<p class="empty-hint">Chưa có ngày nào. Bấm "+ Thêm ngày" để bắt đầu.</p>'; return; }
+    var t=todayStr();
+    days.forEach(function(day){
+      var expanded=state.expandedDays.indexOf(day.id)>=0;
+      var isToday=day.date===t;
+      var card=document.createElement('div');
+      card.className='day-card'+(expanded?' expanded':'')+(isToday?' today':'');
+      var fc=forecastFor(day.region, day.date);
+      var chip = fc ? '<span class="weather-chip">'+Math.round(fc.min)+'°–'+Math.round(fc.max)+'°</span>' : '';
+      var total=dayTotal(day.id);
+      var parts=formatDateShort(day.date).split(' ');
+      card.innerHTML=
+        '<div class="day-header-row">'
+        +'<button class="day-toggle" data-action="toggle-day" data-day="'+day.id+'">'
+          +'<span class="day-date"><span class="dd">'+parts[1]+'</span><span class="dw">'+parts[0]+'</span></span>'
+          +'<span class="day-label">'+escapeHtml(day.label||'')+(isToday?' <span class="today-badge">Hôm nay</span>':'')+'</span>'
+          +chip
+          +'<span class="day-total'+(total===0?' zero':'')+'">'+formatVND(total)+'</span>'
+          +'<span class="chevron"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></span>'
+        +'</button>'
+        +'<div class="day-actions">'
+          +'<button class="icon-btn" data-action="edit-day" data-day="'+day.id+'" aria-label="Sửa ngày">'+ICON_EDIT+'</button>'
+          +'<button class="icon-btn danger" data-action="delete-day" data-day="'+day.id+'" aria-label="Xoá ngày">'+ICON_TRASH+'</button>'
+        +'</div></div>'
+        +'<div class="day-body">'
+          +(fc?'<div class="sub-head" style="--c:var(--a-weather)">'+ICO_CLOUD_S+'Thời tiết</div><div class="stop-note">'+escapeHtml(WMO[fc.code]||'')+(fc.rain!=null?' · khả năng mưa '+fc.rain+'%':'')+'</div>':'')
+          +'<div class="sub-head" style="--c:var(--a-plan)">'+ICO_PIN_S+'Điểm đến'+(dayRouteUrl(day)?'<a class="route-link" href="'+escapeHtml(dayRouteUrl(day))+'" target="_blank" rel="noopener">Lộ trình cả ngày</a>':'')+'</div><div class="stop-list"></div>'
+          +'<button class="dashed-btn" data-action="add-stop" data-day="'+day.id+'">+ Thêm điểm đến</button>'
+          +'<div class="sub-head" style="--c:var(--a-money)">'+ICO_RECEIPT_S+'Chi tiêu</div><div class="expense-list"></div>'
+          +'<button class="dashed-btn" data-action="add-expense" data-day="'+day.id+'">+ Thêm khoản chi</button>'
+        +'</div>';
+      wrap.appendChild(card);
+
+      var stopList=card.querySelector('.stop-list');
+      if(!day.stops.length){ stopList.innerHTML='<p class="empty-hint">Chưa có điểm đến nào.</p>'; }
+      else day.stops.forEach(function(st){
+        var item=document.createElement('div'); item.className='stop-item';
+        var mapBtn = hasCoords(st)
+          ? '<button class="icon-btn" data-action="toggle-map" data-day="'+day.id+'" data-id="'+st.id+'" aria-label="Xem bản đồ" aria-expanded="false">'+ICO_MAP+'</button>'
+          : '<a class="icon-btn" href="'+escapeHtml(mapsUrl(st))+'" target="_blank" rel="noopener" aria-label="Tìm trên Google Maps">'+ICON_PIN+'</a>';
+        item.innerHTML=
+          '<div class="stop-row">'
+          +'<span class="stop-time">'+escapeHtml(st.time||'')+'</span>'
+          +'<span class="stop-main"><span class="stop-name">'+escapeHtml(st.name||'')+'</span>'
+          +(st.note?'<div class="stop-note">'+escapeHtml(st.note)+'</div>':'')
+          +'</span>'
+          +'<span class="stop-actions">'
+            +mapBtn
+            +'<button class="icon-btn" data-action="edit-stop" data-day="'+day.id+'" data-id="'+st.id+'" aria-label="Sửa">'+ICON_EDIT+'</button>'
+            +'<button class="icon-btn danger" data-action="delete-stop" data-day="'+day.id+'" data-id="'+st.id+'" aria-label="Xoá">'+ICON_TRASH+'</button>'
+          +'</span></div>'
+          +'<div class="stop-map" hidden></div>';
+        stopList.appendChild(item);
+      });
+
+      // ghi chú gắn với ngày này, tách theo loại
+      var linkedHtml='';
+      [['outfit','Trang phục &amp; đồ dùng',ICO_SHIRT_S],['general','Ghi chú',ICO_NOTE_S]].forEach(function(k){
+        var items=state.notes.filter(function(n){ return n.dayId===day.id && noteKind(n)===k[0]; });
+        if(!items.length) return;
+        linkedHtml+='<div class="sub-head" style="--c:var(--a-note)">'+k[2]+k[1]+'</div>'
+          + items.map(function(n){
+              return '<div class="day-note"><b>'+escapeHtml(n.title||'')+'</b>'+(n.body?'<div>'+escapeHtml(n.body)+'</div>':'')+'</div>';
+            }).join('');
+      });
+      if(linkedHtml){
+        var nb=document.createElement('div');
+        nb.innerHTML=linkedHtml;
+        card.querySelector('.day-body').insertBefore(nb, card.querySelector('.stop-list').nextSibling.nextSibling);
+      }
+
+      var list=card.querySelector('.expense-list');
+      var exps=dayExpenses(day.id);
+      if(!exps.length){ list.innerHTML='<p class="empty-hint">Chưa có khoản chi nào.</p>'; }
+      else exps.forEach(function(e){
+        var info=catInfo(e.category);
+        var row=document.createElement('div'); row.className='expense-row';
+        row.innerHTML=
+          '<span class="expense-cat-pill" style="background:'+info.bg+';color:'+info.fg+'">'+escapeHtml(info.name)+'</span>'
+          +'<span class="expense-note">'+escapeHtml(e.note||'')+'</span>'
+          +'<span class="expense-amount">'+formatVND(e.amount)+'</span>'
+          +'<span class="expense-actions">'
+            +'<button class="icon-btn" data-action="edit-expense" data-id="'+e.id+'" aria-label="Sửa">'+ICON_EDIT+'</button>'
+            +'<button class="icon-btn danger" data-action="delete-expense" data-id="'+e.id+'" aria-label="Xoá">'+ICON_TRASH+'</button>'
+          +'</span>';
+        list.appendChild(row);
+      });
+    });
+  }
+
+  // ---------- TOAST ----------
+  function showToast(msg,undoFn){
+    var region=document.getElementById('toast-region');
+    var el=document.createElement('div'); el.className='toast';
+    var span=document.createElement('span'); span.textContent=msg; el.appendChild(span);
+    if(undoFn){
+      var b=document.createElement('button'); b.textContent='Hoàn tác';
+      b.addEventListener('click',function(){ undoFn(); el.remove(); });
+      el.appendChild(b);
+    }
+    region.appendChild(el);
+    setTimeout(function(){ el.remove(); },5000);
+  }
+
+  // ---------- ACTIONS ----------
+  function toggleDay(id){
+    var i=state.expandedDays.indexOf(id);
+    if(i>=0) state.expandedDays.splice(i,1); else state.expandedDays.push(id);
+    renderDays(); saveState();
+  }
+  function findDay(id){
+    for(var i=0;i<state.days.length;i++){ if(state.days[i].id===id) return state.days[i]; }
+    return null;
+  }
+  function deleteExpense(id){
+    var idx=-1;
+    for(var i=0;i<state.expenses.length;i++){ if(state.expenses[i].id===id){idx=i;break;} }
+    if(idx<0) return;
+    var removed=state.expenses[idx];
+    state.expenses.splice(idx,1); render(); saveState();
+    showToast('Đã xoá khoản chi',function(){ state.expenses.push(removed); render(); saveState(); });
+  }
+  function deleteStop(dayId,stopId){
+    var day=findDay(dayId); if(!day) return;
+    var idx=-1;
+    for(var i=0;i<day.stops.length;i++){ if(day.stops[i].id===stopId){idx=i;break;} }
+    if(idx<0) return;
+    var removed=day.stops[idx];
+    day.stops.splice(idx,1); renderDays(); saveState();
+    showToast('Đã xoá điểm đến',function(){ day.stops.splice(idx,0,removed); renderDays(); saveState(); });
+  }
+  function deleteDay(dayId){
+    var idx=-1;
+    for(var i=0;i<state.days.length;i++){ if(state.days[i].id===dayId){idx=i;break;} }
+    if(idx<0) return;
+    var removedDay=state.days[idx];
+    var removedExp=state.expenses.filter(function(e){return e.dayId===dayId;});
+    state.days.splice(idx,1);
+    state.expenses=state.expenses.filter(function(e){return e.dayId!==dayId;});
+    render(); saveState();
+    showToast('Đã xoá ngày '+formatDateShort(removedDay.date),function(){
+      state.days.push(removedDay);
+      state.expenses=state.expenses.concat(removedExp);
+      render(); saveState();
+    });
+  }
+  function addDay(){
+    var days=sortedDays(), nextDate;
+    if(days.length){
+      var last=new Date(days[days.length-1].date+'T00:00:00');
+      last.setDate(last.getDate()+1);
+      nextDate=last.getFullYear()+'-'+String(last.getMonth()+1).padStart(2,'0')+'-'+String(last.getDate()).padStart(2,'0');
+    } else nextDate=todayStr();
+    var nd={id:uid(),date:nextDate,label:'Ngày mới',region:activeRegionKey(),stops:[]};
+    state.days.push(nd);
+    state.expandedDays.push(nd.id);
+    render(); saveState();
+    openEditDay(nd.id);
+  }
+
+  // ---------- DAY EDIT ----------
+  function openEditDay(dayId){
+    editingDayId=dayId;
+    var day=findDay(dayId); if(!day) return;
+    document.getElementById('day-edit-date').value=day.date;
+    document.getElementById('day-edit-label').value=day.label;
+    var sel=document.getElementById('day-edit-region'); sel.innerHTML='';
+    Object.keys(REGIONS).forEach(function(k){
+      var o=document.createElement('option'); o.value=k; o.textContent=REGIONS[k].name; sel.appendChild(o);
+    });
+    sel.value=day.region||'cao-bang';
+    document.getElementById('day-edit-overlay').hidden=false;
+  }
+  function closeEditDay(){ document.getElementById('day-edit-overlay').hidden=true; editingDayId=null; }
+  function saveEditDay(){
+    var day=findDay(editingDayId); if(!day) return;
+    var date=document.getElementById('day-edit-date').value;
+    var label=document.getElementById('day-edit-label').value.trim();
+    if(date) day.date=date;
+    day.label=label||'Không có tên';
+    day.region=document.getElementById('day-edit-region').value;
+    closeEditDay(); render(); saveState();
+  }
+
+  // ---------- STOP MODAL ----------
+  function openStopModal(dayId,stopId){
+    editingStopDayId=dayId; editingStopId=stopId||null;
+    document.getElementById('stop-title').textContent = stopId?'Sửa điểm đến':'Thêm điểm đến';
+    var time='',name='',note='',coords='';
+    if(stopId){
+      var day=findDay(dayId);
+      if(day) for(var i=0;i<day.stops.length;i++){
+        if(day.stops[i].id===stopId){
+          var s=day.stops[i];
+          time=s.time||''; name=s.name||''; note=s.note||'';
+          coords=(s.lat!=null&&s.lng!=null)?(s.lat+','+s.lng):'';
+          break;
+        }
+      }
+    }
+    document.getElementById('s-time').value=time;
+    document.getElementById('s-name').value=name;
+    document.getElementById('s-note').value=note;
+    document.getElementById('s-coords').value=coords;
+    document.getElementById('stop-overlay').hidden=false;
+  }
+  function closeStopModal(){
+    document.getElementById('stop-overlay').hidden=true;
+    editingStopDayId=null; editingStopId=null;
+  }
+  function saveStop(){
+    var day=findDay(editingStopDayId); if(!day) return;
+    var name=document.getElementById('s-name').value.trim();
+    if(!name){ showToast('Nhập tên điểm đến'); return; }
+    var time=document.getElementById('s-time').value.trim();
+    var note=document.getElementById('s-note').value.trim();
+    var coordsRaw=document.getElementById('s-coords').value.trim();
+    var lat=null,lng=null;
+    if(coordsRaw){
+      var parts=coordsRaw.split(/[,\s]+/);
+      var a=parseFloat(parts[0]), b=parseFloat(parts[1]);
+      if(!isNaN(a)&&!isNaN(b)){ lat=a; lng=b; }
+    }
+    if(editingStopId){
+      for(var i=0;i<day.stops.length;i++){
+        if(day.stops[i].id===editingStopId){
+          day.stops[i].time=time; day.stops[i].name=name;
+          day.stops[i].note=note; day.stops[i].lat=lat; day.stops[i].lng=lng;
+          break;
+        }
+      }
+    } else {
+      day.stops.push({id:uid(),time:time,name:name,note:note,lat:lat,lng:lng});
+    }
+    closeStopModal(); renderDays(); saveState();
+  }
+
+  // ---------- EXPENSE MODAL ----------
+  function openExpenseModal(dayId,expenseId){
+    editingExpenseId=expenseId||null;
+    document.getElementById('modal-overlay').hidden=false;
+    document.getElementById('modal-title').textContent=expenseId?'Sửa khoản chi':'Thêm khoản chi';
+    var sel=document.getElementById('f-day'); sel.innerHTML='';
+    sortedDays().forEach(function(d){
+      var o=document.createElement('option'); o.value=d.id;
+      o.textContent=formatDateShort(d.date)+' · '+d.label; sel.appendChild(o);
+    });
+    var category=state.categories.length?state.categories[0].id:'khac', note='', amount='';
+    if(expenseId){
+      for(var i=0;i<state.expenses.length;i++){
+        if(state.expenses[i].id===expenseId){
+          var e=state.expenses[i];
+          sel.value=e.dayId; category=e.category; note=e.note; amount=e.amount; break;
+        }
+      }
+    } else sel.value=dayId||defaultDayId();
+    document.getElementById('f-note').value=note;
+    document.getElementById('f-amount').value=amount||'';
+    document.getElementById('amount-preview').textContent=amount?formatVND(amount):'';
+    document.getElementById('new-cat-row').hidden=true;
+    renderCategoryPicker(category);
+  }
+  function closeExpenseModal(){ document.getElementById('modal-overlay').hidden=true; editingExpenseId=null; }
+  function renderCategoryPicker(activeId){
+    selectedCategory=activeId;
+    var wrap=document.getElementById('cat-picker'); wrap.innerHTML='';
+    state.categories.forEach(function(c){
+      var chip=document.createElement('button'); chip.type='button';
+      chip.className='cat-chip'+(c.id===activeId?' selected':'');
+      chip.textContent=c.name;
+      chip.addEventListener('click',function(){ renderCategoryPicker(c.id); });
+      wrap.appendChild(chip);
+    });
+    var add=document.createElement('button'); add.type='button';
+    add.className='cat-chip add-new'; add.textContent='+ Hạng mục';
+    add.addEventListener('click',function(){
+      document.getElementById('new-cat-row').hidden=false;
+      document.getElementById('new-cat-input').focus();
+    });
+    wrap.appendChild(add);
+  }
+  function confirmNewCategory(){
+    var input=document.getElementById('new-cat-input');
+    var name=input.value.trim(); if(!name) return;
+    var id='c-'+uid();
+    state.categories.push({id:id,name:name,color:state.categories.length%PALETTE.length});
+    input.value=''; document.getElementById('new-cat-row').hidden=true;
+    renderCategoryPicker(id);
+  }
+  function saveExpense(){
+    var dayId=document.getElementById('f-day').value;
+    var note=document.getElementById('f-note').value.trim();
+    var amount=parseAmountInput(document.getElementById('f-amount').value);
+    if(!dayId){ showToast('Chưa có ngày nào, hãy thêm ngày trước'); return; }
+    if(amount<=0){ showToast('Nhập số tiền hợp lệ'); return; }
+    if(editingExpenseId){
+      for(var i=0;i<state.expenses.length;i++){
+        if(state.expenses[i].id===editingExpenseId){
+          var e=state.expenses[i];
+          e.dayId=dayId; e.category=selectedCategory; e.note=note; e.amount=amount; break;
+        }
+      }
+    } else {
+      state.expenses.push({id:uid(),dayId:dayId,category:selectedCategory,note:note,amount:amount,createdAt:Date.now()});
+      if(state.expandedDays.indexOf(dayId)<0) state.expandedDays.push(dayId);
+    }
+    closeExpenseModal(); render(); saveState();
+  }
+
+  // ---------- PREPAID ----------
+  function openPrepaidModal(id){
+    editingPrepaidId=id||null;
+    document.getElementById('prepaid-title').textContent = id?'Sửa khoản trả trước':'Thêm khoản trả trước';
+    var name='',total='',paid='',note='';
+    if(id) for(var i=0;i<state.prepaid.length;i++){
+      if(state.prepaid[i].id===id){
+        var p=state.prepaid[i];
+        name=p.name||''; total=p.total||''; paid=p.paid||''; note=p.note||''; break;
+      }
+    }
+    document.getElementById('p-name').value=name;
+    document.getElementById('p-total').value=total;
+    document.getElementById('p-paid').value=paid;
+    document.getElementById('p-note').value=note;
+    document.getElementById('p-total-preview').textContent=total?formatVND(total):'';
+    document.getElementById('p-paid-preview').textContent=paid?formatVND(paid):'';
+    document.getElementById('prepaid-overlay').hidden=false;
+  }
+  function closePrepaidModal(){ document.getElementById('prepaid-overlay').hidden=true; editingPrepaidId=null; }
+  function savePrepaid(){
+    var name=document.getElementById('p-name').value.trim();
+    if(!name){ showToast('Nhập tên khoản'); return; }
+    var total=parseAmountInput(document.getElementById('p-total').value);
+    var paid=parseAmountInput(document.getElementById('p-paid').value);
+    if(total<=0){ showToast('Nhập tổng tiền hợp lệ'); return; }
+    if(paid>total){ showToast('Đã trả không thể lớn hơn tổng tiền'); return; }
+    var note=document.getElementById('p-note').value.trim();
+    if(editingPrepaidId){
+      for(var i=0;i<state.prepaid.length;i++){
+        if(state.prepaid[i].id===editingPrepaidId){
+          var p=state.prepaid[i];
+          p.name=name; p.total=total; p.paid=paid; p.note=note; break;
+        }
+      }
+    } else {
+      state.prepaid.push({id:uid(),name:name,total:total,paid:paid,note:note});
+    }
+    closePrepaidModal(); render(); saveState();
+  }
+  function deletePrepaid(id){
+    var idx=-1;
+    for(var i=0;i<state.prepaid.length;i++){ if(state.prepaid[i].id===id){idx=i;break;} }
+    if(idx<0) return;
+    var removed=state.prepaid[idx];
+    state.prepaid.splice(idx,1); render(); saveState();
+    showToast('Đã xoá khoản trả trước',function(){ state.prepaid.splice(idx,0,removed); render(); saveState(); });
+  }
+
+  // ---------- NOTES ----------
+  function applyNoteKind(kind){
+    var outfit = kind==='outfit';
+    document.getElementById('n-kind').value = outfit ? 'outfit' : 'general';
+    document.getElementById('n-title-label').textContent = outfit ? 'Nơi nào / tình huống nào' : 'Tiêu đề';
+    document.getElementById('n-title').placeholder = outfit ? 'VD: Thác Bản Giốc' : 'VD: Nhà xe Hà Nội – Cao Bằng';
+    document.getElementById('n-body-label').textContent = outfit ? 'Mặc / mang gì' : 'Nội dung';
+    document.getElementById('n-body').placeholder = outfit ? 'Bạn tự ghi ở đây' : 'VD: Đón tại Nội Bài, phụ thu 200k/xe';
+    document.getElementById('n-phone-field').hidden = outfit;
+  }
+  function openNoteModal(id, kind){
+    editingNoteId=id||null;
+    var title='',body='',phone='',dayId='', k=kind||'general';
+    if(id) for(var i=0;i<state.notes.length;i++){
+      if(state.notes[i].id===id){
+        var n=state.notes[i];
+        title=n.title||''; body=n.body||''; phone=n.phone||''; dayId=n.dayId||''; k=noteKind(n); break;
+      }
+    }
+    document.getElementById('note-title-label').textContent = id ? 'Sửa ghi chú' : (k==='outfit' ? 'Thêm ghi chú trang phục' : 'Thêm ghi chú');
+    var dsel=document.getElementById('n-day'); dsel.innerHTML='';
+    var none=document.createElement('option'); none.value=''; none.textContent='Không gắn ngày'; dsel.appendChild(none);
+    sortedDays().forEach(function(d){
+      var o=document.createElement('option'); o.value=d.id;
+      o.textContent=formatDateShort(d.date)+' · '+d.label; dsel.appendChild(o);
+    });
+    dsel.value = findDay(dayId) ? dayId : '';
+    document.getElementById('n-title').value=title;
+    document.getElementById('n-body').value=body;
+    document.getElementById('n-phone').value=phone;
+    applyNoteKind(k);
+    document.getElementById('note-overlay').hidden=false;
+  }
+  function closeNoteModal(){ document.getElementById('note-overlay').hidden=true; editingNoteId=null; }
+  function saveNote(){
+    var kind=document.getElementById('n-kind').value==='outfit' ? 'outfit' : 'general';
+    var title=document.getElementById('n-title').value.trim();
+    if(!title){ showToast(kind==='outfit' ? 'Nhập nơi hoặc tình huống' : 'Nhập tiêu đề ghi chú'); return; }
+    var body=document.getElementById('n-body').value.trim();
+    var phone = kind==='outfit' ? '' : document.getElementById('n-phone').value.trim();
+    var dayId=document.getElementById('n-day').value||'';
+    if(editingNoteId){
+      for(var i=0;i<state.notes.length;i++){
+        if(state.notes[i].id===editingNoteId){
+          var n=state.notes[i];
+          n.title=title; n.body=body; n.phone=phone; n.dayId=dayId; n.kind=kind; break;
+        }
+      }
+    } else {
+      state.notes.push({id:uid(),kind:kind,title:title,body:body,phone:phone,dayId:dayId});
+    }
+    closeNoteModal(); renderNotes(); renderDays(); saveState();
+  }
+  function deleteNote(id){
+    var idx=-1;
+    for(var i=0;i<state.notes.length;i++){ if(state.notes[i].id===id){idx=i;break;} }
+    if(idx<0) return;
+    var removed=state.notes[idx];
+    state.notes.splice(idx,1); renderNotes(); renderDays(); saveState();
+    showToast('Đã xoá ghi chú',function(){ state.notes.splice(idx,0,removed); renderNotes(); renderDays(); saveState(); });
+  }
+
+  // ---------- MAP (chỉ tải khi bấm, offline không tốn gì) ----------
+  function toggleMap(dayId, stopId, btn){
+    var item=btn.closest('.stop-item'); if(!item) return;
+    var box=item.querySelector('.stop-map'); if(!box) return;
+    var day=findDay(dayId); if(!day) return;
+    var st=null;
+    for(var i=0;i<day.stops.length;i++){ if(day.stops[i].id===stopId) st=day.stops[i]; }
+    if(!st || !hasCoords(st)) return;
+    if(!box.hidden){ box.hidden=true; box.innerHTML=''; btn.setAttribute('aria-expanded','false'); return; }
+    buildMap(box, st);
+    box.hidden=false; btn.setAttribute('aria-expanded','true');
+  }
+  function buildMap(box, st){
+    var prov=mapProvider();
+    var online = (typeof navigator.onLine==='boolean') ? navigator.onLine : true;
+    var links='<div class="map-links">'
+      +'<a href="'+escapeHtml(mapsUrl(st))+'" target="_blank" rel="noopener">Mở Google Maps</a>'
+      +'<a href="'+escapeHtml(directionsUrl(st))+'" target="_blank" rel="noopener">Chỉ đường tới đây</a>'
+      +'<button type="button" data-action="swap-map">'+(prov==='osm'?'Dùng bản đồ Google':'Không hiện? Thử OpenStreetMap')+'</button>'
+      +'</div>';
+    if(!online){
+      box.innerHTML='<div class="map-off">Đang offline nên chưa tải được bản đồ. Có mạng thì bấm lại. Nếu đã tải bản đồ offline trong Google Maps thì nút Mở Google Maps bên dưới vẫn dùng được.</div>'+links;
+    } else {
+      box.innerHTML='<iframe title="Bản đồ '+escapeHtml(st.name||'')+'" loading="lazy" src="'+escapeHtml(mapEmbedUrl(st,prov))+'"></iframe>'+links;
+    }
+    var sw=box.querySelector('[data-action="swap-map"]');
+    if(sw) sw.addEventListener('click',function(){
+      try{ localStorage.setItem(MAP_PROV_KEY, mapProvider()==='osm'?'google':'osm'); }catch(e){}
+      buildMap(box, st);
+    });
+  }
+
+  // ---------- PACKING ----------
+  function renderPacking(){
+    var wrap=document.getElementById('pack-list'); wrap.innerHTML='';
+    var items=state.packing||[];
+    var done=items.filter(function(x){return x.done;}).length;
+    document.getElementById('pack-count').textContent = items.length ? (done+'/'+items.length) : '';
+    if(!items.length){
+      wrap.innerHTML='<p class="empty-hint">Chưa có món nào. Bấm + để thêm.</p>';
+      return;
+    }
+    var groups=[], byGroup={};
+    items.forEach(function(x){
+      var g=x.group||'Khác';
+      if(!byGroup[g]){ byGroup[g]=[]; groups.push(g); }
+      byGroup[g].push(x);
+    });
+    var card=document.createElement('div'); card.className='pack-card';
+    groups.forEach(function(g){
+      var list=byGroup[g], gd=list.filter(function(x){return x.done;}).length;
+      var head=document.createElement('div'); head.className='pack-group-title';
+      head.innerHTML='<span>'+escapeHtml(g)+'</span><span>'+gd+'/'+list.length+'</span>';
+      card.appendChild(head);
+      list.forEach(function(x){
+        var row=document.createElement('div'); row.className='pack-item'+(x.done?' done':'');
+        row.innerHTML=
+          '<button class="pack-check" role="checkbox" aria-checked="'+(x.done?'true':'false')+'" aria-label="'+escapeHtml(x.text)+'" data-action="toggle-pack" data-id="'+x.id+'"><span class="box">'+ICO_CHECK+'</span></button>'
+          +'<span class="pack-text" data-action="toggle-pack" data-id="'+x.id+'">'+escapeHtml(x.text)+'</span>'
+          +'<span class="pack-actions">'
+            +'<button class="icon-btn" data-action="edit-pack" data-id="'+x.id+'" aria-label="Sửa">'+ICON_EDIT+'</button>'
+            +'<button class="icon-btn danger" data-action="delete-pack" data-id="'+x.id+'" aria-label="Xoá">'+ICON_TRASH+'</button>'
+          +'</span>';
+        card.appendChild(row);
+      });
+    });
+    wrap.appendChild(card);
+  }
+  function findPack(id){
+    for(var i=0;i<state.packing.length;i++){ if(state.packing[i].id===id) return state.packing[i]; }
+    return null;
+  }
+  function togglePack(id){ var x=findPack(id); if(!x) return; x.done=!x.done; renderPacking(); saveState(); }
+  function openPackModal(id){
+    editingPackId=id||null;
+    document.getElementById('pack-title').textContent = id?'Sửa đồ mang theo':'Thêm đồ mang theo';
+    var x=id?findPack(id):null;
+    document.getElementById('k-text').value = x?x.text:'';
+    document.getElementById('k-group').value = x?(x.group||''):'';
+    var dl=document.getElementById('pack-groups'); dl.innerHTML='';
+    var seen={};
+    state.packing.forEach(function(it){
+      var g=it.group||'Khác';
+      if(seen[g]) return; seen[g]=1;
+      var o=document.createElement('option'); o.value=g; dl.appendChild(o);
+    });
+    document.getElementById('pack-overlay').hidden=false;
+  }
+  function closePackModal(){ document.getElementById('pack-overlay').hidden=true; editingPackId=null; }
+  function savePack(){
+    var text=document.getElementById('k-text').value.trim();
+    if(!text){ showToast('Nhập tên món đồ'); return; }
+    var group=document.getElementById('k-group').value.trim()||'Khác';
+    if(editingPackId){
+      var x=findPack(editingPackId);
+      if(x){ x.text=text; x.group=group; }
+    } else {
+      state.packing.push({id:uid(),group:group,text:text,done:false});
+    }
+    closePackModal(); renderPacking(); saveState();
+  }
+  function deletePack(id){
+    var idx=-1;
+    for(var i=0;i<state.packing.length;i++){ if(state.packing[i].id===id){idx=i;break;} }
+    if(idx<0) return;
+    var removed=state.packing[idx];
+    state.packing.splice(idx,1); renderPacking(); saveState();
+    showToast('Đã xoá "'+removed.text+'"',function(){ state.packing.splice(idx,0,removed); renderPacking(); saveState(); });
+  }
+  function clearPacking(){
+    if(!state.packing.length) return;
+    var removed=state.packing.slice();
+    state.packing=[]; renderPacking(); saveState();
+    showToast('Đã xoá '+removed.length+' món',function(){ state.packing=removed; renderPacking(); saveState(); });
+  }
+  function resetPackTicks(){
+    var n=0; state.packing.forEach(function(x){ if(x.done){ x.done=false; n++; } });
+    renderPacking(); saveState();
+    if(n) showToast('Đã bỏ tick '+n+' món');
+  }
+
+  // ---------- THEME ----------
+  function currentTheme(){ return document.documentElement.getAttribute('data-theme')==='dark'?'dark':'light'; }
+  function applyTheme(theme,persist){
+    document.documentElement.setAttribute('data-theme',theme);
+    document.getElementById('icon-sun').hidden = (theme==='dark');
+    document.getElementById('icon-moon').hidden = (theme!=='dark');
+    var meta=document.getElementById('theme-color-meta');
+    if(meta) meta.setAttribute('content', theme==='dark'?'#191918':'#FBFBFA');
+    if(persist){ try{ localStorage.setItem(THEME_KEY,theme); }catch(e){} }
+    if(state) render(); // vẽ lại để màu hạng mục đổi theo nền
+  }
+  function toggleTheme(){ applyTheme(currentTheme()==='dark'?'light':'dark', true); }
+  function watchSystemTheme(){
+    if(!window.matchMedia) return;
+    var mq=window.matchMedia('(prefers-color-scheme: dark)');
+    var handler=function(e){
+      var saved=null;
+      try{ saved=localStorage.getItem(THEME_KEY); }catch(err){}
+      if(!saved) applyTheme(e.matches?'dark':'light',false); // chưa chọn tay thì bám theo hệ thống
+    };
+    if(mq.addEventListener) mq.addEventListener('change',handler);
+    else if(mq.addListener) mq.addListener(handler);
+  }
+
+  // ---------- TRIP EDIT ----------
+  function openTripEdit(){
+    document.getElementById('trip-edit-name').value=state.trip.name;
+    document.getElementById('trip-edit-budget').value=state.trip.budget;
+    document.getElementById('trip-edit-overlay').hidden=false;
+  }
+  function closeTripEdit(){ document.getElementById('trip-edit-overlay').hidden=true; }
+  function saveTripEdit(){
+    var name=document.getElementById('trip-edit-name').value.trim();
+    var budget=parseAmountInput(document.getElementById('trip-edit-budget').value);
+    state.trip.name=name||state.trip.name;
+    state.trip.budget=budget;
+    closeTripEdit(); render(); saveState();
+  }
+
+  // ---------- EXPORT / IMPORT / RESET ----------
+  function exportData(){
+    try{
+      var blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json'});
+      var url=URL.createObjectURL(blob);
+      var a=document.createElement('a');
+      a.href=url; a.download='chi-tieu-cao-bang-'+todayStr()+'.json';
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      setTimeout(function(){ URL.revokeObjectURL(url); },1000);
+      showToast('Đã tải file sao lưu');
+    }catch(e){ showToast('Không xuất được file'); }
+  }
+  var pendingImport=null;
+  var IMPORT_TEXT_REPLACE='Khôi phục sẽ thay thế toàn bộ dữ liệu hiện tại bằng nội dung file này. Tiếp tục?';
+  // file gộp (cbMerge:1): chỉ thêm khoản trả trước và ghi chú chưa có, không xoá hay sửa gì đang có
+  function mergeNew(d){
+    var haveP={}, haveN={};
+    state.prepaid.forEach(function(p){ haveP[p.id]=1; });
+    state.notes.forEach(function(n){ haveN[n.id]=1; });
+    return {
+      prepaid:(Array.isArray(d.prepaid)?d.prepaid:[]).filter(function(p){ return p && p.id && !haveP[p.id]; }),
+      notes:(Array.isArray(d.notes)?d.notes:[]).filter(function(n){ return n && n.id && !haveN[n.id]; })
+    };
+  }
+  function handleImportFile(ev){
+    var file=ev.target.files&&ev.target.files[0]; if(!file) return;
+    var reader=new FileReader();
+    reader.onload=function(){
+      try{
+        var data=JSON.parse(reader.result);
+        var textEl=document.getElementById('import-confirm-text');
+        var okBtn=document.getElementById('import-confirm-btn');
+        if(data && data.cbMerge===1){
+          var add=mergeNew(data);
+          var total=add.prepaid.length+add.notes.length;
+          if(!total){ showToast('Dữ liệu trong file này đã có sẵn, không có gì để gộp'); return; }
+          var parts=[];
+          if(add.notes.length) parts.push(add.notes.length+' ghi chú');
+          if(add.prepaid.length) parts.push(add.prepaid.length+' khoản trả trước');
+          pendingImport={merge:true,add:add};
+          textEl.textContent='Gộp thêm '+parts.join(' và ')+' từ file này? Dữ liệu hiện có được giữ nguyên.';
+          okBtn.textContent='Gộp vào';
+        } else if(data && data.trip && data.days){
+          pendingImport={merge:false,data:data};
+          textEl.textContent = sync.room
+            ? 'Đang đồng bộ: khôi phục sẽ thay thế dữ liệu của CẢ HAI người bằng nội dung file này. Tiếp tục?'
+            : IMPORT_TEXT_REPLACE;
+          okBtn.textContent='Khôi phục';
+        } else { showToast('File không đúng định dạng'); return; }
+        document.getElementById('import-confirm').hidden=false;
+      }catch(e){ showToast('Không đọc được file này'); }
+    };
+    reader.readAsText(file); ev.target.value='';
+  }
+  function cancelImport(){ pendingImport=null; document.getElementById('import-confirm').hidden=true; }
+  function confirmImport(){
+    if(!pendingImport) return;
+    var pi=pendingImport; pendingImport=null;
+    document.getElementById('import-confirm').hidden=true;
+    if(pi.merge){
+      pi.add.prepaid.forEach(function(p){
+        state.prepaid.push({id:String(p.id),name:String(p.name||''),total:Number(p.total)||0,paid:Number(p.paid)||0,note:String(p.note||'')});
+      });
+      pi.add.notes.forEach(function(n){
+        state.notes.push({id:String(n.id),kind:n.kind==='outfit'?'outfit':'general',title:String(n.title||''),body:String(n.body||''),phone:String(n.phone||''),dayId:String(n.dayId||'')});
+      });
+      var cnt=pi.add.prepaid.length+pi.add.notes.length;
+      render(); saveState(); showToast('Đã gộp '+cnt+' mục');
+      return;
+    }
+    state=migrate(pi.data);
+    render(); saveState(); showToast('Đã khôi phục dữ liệu');
+  }
+  function showResetConfirm(){
+    document.getElementById('reset-confirm-text').textContent = sync.room
+      ? 'Đang đồng bộ: thao tác này xoá dữ liệu của CẢ HAI người và đưa về lịch trình mặc định. Không thể hoàn tác.'
+      : 'Xoá hết dữ liệu chi tiêu và đưa về lịch trình mặc định? Không thể hoàn tác.';
+    document.getElementById('reset-confirm').hidden=false;
+  }
+  function hideResetConfirm(){ document.getElementById('reset-confirm').hidden=true; }
+  function doReset(){
+    state=defaultState(); hideResetConfirm();
+    render(); saveState(); showToast('Đã đặt lại dữ liệu');
+  }
+
+  // ---------- SYNC: dùng chung dữ liệu với bạn đi cùng qua Firebase Firestore ----------
+  // Mỗi mục (ngày, khoản chi, ghi chú, món đồ...) là một đơn vị riêng có dấu thời gian _u.
+  // Hai người sửa KHÁC mục thì cả hai bản đều được giữ; sửa CÙNG một mục thì bản sửa sau cùng thắng.
+  var SYNC_KEY='cb-trip-sync-v1';
+  var SYNC_COLLS=['days','expenses','prepaid','notes','packing','categories'];
+  // Dùng chính project Firebase cá nhân của bạn (cùng cấu hình, cùng SDK 9.23.0 từ cdnjs, cùng đăng nhập ẩn danh
+  // như file Tasks_Tracking). Dữ liệu chuyến đi nằm ở collection taskAccounts, tài liệu trip_<mã phòng>.
+  var CB_PRESET_CFG = {apiKey:"AIzaSyDGIPSV0uMNMs9Svfn2YWN1b_CQnFY9ANw",authDomain:"task-manager-personal-f543e.firebaseapp.com",projectId:"task-manager-personal-f543e",storageBucket:"task-manager-personal-f543e.firebasestorage.app",messagingSenderId:"439010018138",appId:"1:439010018138:web:e497a23cae97bc77e52963"};
+  var SYNC_COL='taskAccounts';
+  var SDK_BASE='https://cdnjs.cloudflare.com/ajax/libs/firebase/9.23.0/';
+  var sync={cfg:null,room:null,meta:{},firstServer:false,handle:null,starting:false,startFailed:false,
+            live:false,err:'',inflight:{},timer:null,seq:0,invite:null,lastOk:0};
+  var FIRESTORE_RULES=[
+    "match /taskAccounts/{id} {",
+    "  allow read, write: if request.auth != null;",
+    "}"
+  ].join('\n');
+
+  function loadSync(){
+    try{
+      var raw=localStorage.getItem(SYNC_KEY);
+      if(raw){ var o=JSON.parse(raw); sync.cfg=o.cfg||null; sync.room=o.room||null; sync.meta=o.meta||{}; sync.firstServer=!!o.firstServer; }
+    }catch(e){}
+    if(!sync.cfg) sync.cfg=CB_PRESET_CFG;
+  }
+  function saveSync(){
+    try{ localStorage.setItem(SYNC_KEY, JSON.stringify({cfg:sync.cfg,room:sync.room,meta:sync.meta,firstServer:sync.firstServer})); }catch(e){}
+  }
+
+  // băm nội dung một mục (bỏ _u, _c) để biết mục có bị sửa không
+  function canon(v){
+    if(Array.isArray(v)) return '['+v.map(canon).join(',')+']';
+    if(v && typeof v==='object'){
+      return '{'+Object.keys(v).filter(function(k){ return v[k]!==undefined; }).sort().map(function(k){ return JSON.stringify(k)+':'+canon(v[k]); }).join(',')+'}';
+    }
+    return JSON.stringify(v===undefined?null:v);
+  }
+  function fnv(str,seed){ var h=seed>>>0; for(var i=0;i<str.length;i++){ h^=str.charCodeAt(i); h=Math.imul(h,16777619)>>>0; } return h; }
+  function hash16(str){ return ('00000000'+fnv(str,2166136261).toString(16)).slice(-8)+('00000000'+fnv(str,3339675911).toString(16)).slice(-8); }
+  function hashOf(it){
+    var o={}; Object.keys(it).forEach(function(k){ if(k!=='_u' && k!=='_c') o[k]=it[k]; });
+    return hash16(canon(o));
+  }
+  function contentOf(it){ var o={}; Object.keys(it).forEach(function(k){ if(k!=='_u') o[k]=it[k]; }); return o; }
+
+  function eachIn(s,fn){
+    SYNC_COLLS.forEach(function(c){ (s[c]||[]).forEach(function(it){ if(it && it.id!==undefined) fn(c,String(it.id),it); }); });
+    if(s.trip) fn('meta','trip',s.trip);
+  }
+  function eachLocal(fn){ eachIn(state,fn); }
+  function findLocal(coll,id){
+    if(coll==='meta') return id==='trip' ? state.trip : null;
+    var arr=state[coll]||[];
+    for(var i=0;i<arr.length;i++){ if(String(arr[i].id)===id) return arr[i]; }
+    return null;
+  }
+  function upsertLocal(coll,id,it){
+    if(coll==='meta'){ if(id==='trip') state.trip=it; return; }
+    var arr=state[coll]||(state[coll]=[]);
+    for(var i=0;i<arr.length;i++){ if(String(arr[i].id)===id){ arr[i]=it; return; } }
+    arr.push(it);
+  }
+  function removeLocal(coll,id){
+    if(coll==='meta') return;
+    var arr=state[coll]||[];
+    for(var i=0;i<arr.length;i++){ if(String(arr[i].id)===id){ arr.splice(i,1); return; } }
+  }
+  function nextC(){ sync.seq=(sync.seq+1)%1000; return Date.now()*1000+sync.seq; }
+  function sortByC(){
+    ['expenses','prepaid','notes','packing','categories'].forEach(function(c){
+      var arr=state[c]; if(!arr) return;
+      var idx=arr.map(function(x,i){ return [x,i]; });
+      idx.sort(function(a,b){ var d=(a[0]._c||0)-(b[0]._c||0); return d||a[1]-b[1]; });
+      state[c]=idx.map(function(pr){ return pr[0]; });
+    });
+  }
+  function snapHashes(s){ var o={}; eachIn(s,function(c,id,it){ o[c+':'+id]=hashOf(it); }); return o; }
+  function safeParse(j){ try{ return JSON.parse(j); }catch(e){ return null; } }
+
+  // ----- máy này -> đám mây -----
+  function scheduleTick(){
+    if(!sync.room) return;
+    clearTimeout(sync.timer); sync.timer=setTimeout(syncTick,250);
+  }
+  function syncTick(){
+    sync.timer=null;
+    if(!sync.room || !sync.handle || !sync.firstServer || !state) return;
+    var now=Date.now(), changes={}, pushed=[], dirty=false, seen={};
+    function put(coll,id,obj,key,tag){ (changes[coll]||(changes[coll]={}))[id]=obj; pushed.push({key:key,tag:tag,u:obj.u}); }
+    eachLocal(function(coll,id,it){
+      var key=coll+':'+id; seen[key]=1;
+      var m=sync.meta[key]||(sync.meta[key]={});
+      var h=hashOf(it);
+      if(m.t || m.sh!==h){ it._u=now; if(coll!=='meta' && !it._c) it._c=nextC(); m.sh=h; m.t=0; dirty=true; }
+      var tag=h+':'+it._u;
+      if((m.ah!==h || m.au!==it._u) && sync.inflight[key]!==tag){
+        put(coll,id,{u:it._u,d:false,j:JSON.stringify(contentOf(it))},key,tag);
+      }
+    });
+    Object.keys(sync.meta).forEach(function(key){
+      if(seen[key]) return;
+      var i=key.indexOf(':'), coll=key.slice(0,i), id=key.slice(i+1), m=sync.meta[key];
+      if(coll==='meta') return;
+      if(m.sh && !m.t){ m.t=1; m.tu=now; m.sh=null; dirty=true; }
+      if(m.t && (m.ah!=='T' || m.au!==m.tu)){
+        var tag='T:'+m.tu;
+        if(sync.inflight[key]!==tag) put(coll,id,{u:m.tu,d:true,j:''},key,tag);
+      }
+    });
+    if(dirty) persistLocal();
+    saveSync();
+    if(!pushed.length){ updateSyncUi(); return; }
+    pushed.forEach(function(pr){ sync.inflight[pr.key]=pr.tag; });
+    updateSyncUi();
+    var handle=sync.handle;
+    Promise.resolve().then(function(){ return handle.push(changes); }).then(function(){
+      pushed.forEach(function(pr){
+        delete sync.inflight[pr.key];
+        var m=sync.meta[pr.key]; if(!m) return;
+        if(pr.tag.charAt(0)==='T'){ m.ah='T'; m.au=pr.u; }
+        else { m.ah=pr.tag.split(':')[0]; m.au=pr.u; }
+      });
+      sync.lastOk=Date.now(); sync.err=''; saveSync(); updateSyncUi();
+    }).catch(function(e){
+      pushed.forEach(function(pr){ delete sync.inflight[pr.key]; });
+      setSyncError(e);
+    });
+  }
+
+  // ----- đám mây -> máy này -----
+  function syncApplyRemote(data){
+    if(!data) return false;
+    var changed=false;
+    SYNC_COLLS.concat(['meta']).forEach(function(coll){
+      var map=data[coll]; if(!map || typeof map!=='object') return;
+      Object.keys(map).forEach(function(id){
+        var r=map[id]; if(!r || typeof r.u!=='number') return;
+        var key=coll+':'+id, m=sync.meta[key]||(sync.meta[key]={});
+        var loc=findLocal(coll,id);
+        var lu = loc ? (loc._u||0) : (m.t ? (m.tu||0) : -1);
+        var win;
+        if(lu<0 || r.u>lu) win='remote';
+        else if(r.u<lu) win='local';
+        else {
+          var rc = r.d ? 'T' : canon(safeParse(r.j)||{});
+          var lc = loc ? canon(contentOf(loc)) : 'T';
+          win = rc===lc ? 'same' : (rc>lc ? 'remote' : 'local');
+        }
+        if(win==='remote'){
+          if(r.d){
+            if(loc){ removeLocal(coll,id); changed=true; }
+            m.t=1; m.tu=r.u; m.sh=null; m.ah='T'; m.au=r.u;
+          } else {
+            var it=safeParse(r.j); if(!it || typeof it!=='object') return;
+            it._u=r.u; upsertLocal(coll,id,it); changed=true;
+            m.t=0; m.sh=hashOf(it); m.ah=m.sh; m.au=r.u;
+          }
+          delete sync.inflight[key];
+        } else if(win==='local'){
+          // bản trên máy mới hơn bản trên mây (ví dụ một máy offline gửi bản cũ lên sau): gửi lại để sửa
+          m.ah=null; m.au=null; delete sync.inflight[key];
+        } else {
+          if(loc){ m.sh=m.sh||hashOf(loc); m.ah=hashOf(loc); m.au=loc._u||0; }
+          else { m.ah='T'; m.au=lu; }
+        }
+      });
+    });
+    if(changed) sortByC();
+    return changed;
+  }
+  function onCloudSnapshot(sn){
+    if(!sn.fromCache && !sync.firstServer) sync.firstServer=true;
+    var changed=false;
+    if(sn.exists && sn.data) changed=syncApplyRemote(sn.data);
+    sync.live=!sn.fromCache;
+    if(!sn.fromCache){ sync.lastOk=Date.now(); sync.err=''; }
+    if(changed){ persistLocal(); render(); }
+    saveSync(); updateSyncUi(); scheduleTick();
+  }
+
+  // ----- trạng thái + lỗi -----
+  function syncErrText(e){
+    var c=(e && e.code)||'';
+    if(/permission-denied/.test(c)) return 'Firestore từ chối: Rules của project chưa cho phép collection '+SYNC_COL+' (hoặc chưa bật đăng nhập ẩn danh). Xem phần hướng dẫn bên dưới.';
+    if(/not-found/.test(c)) return 'Project này chưa tạo Firestore Database.';
+    if(/invalid-argument|failed-precondition|api-key|invalid-api-key/.test(c)) return 'Cấu hình Firebase chưa đúng ('+c+').';
+    return 'Lỗi đồng bộ'+(c?' ('+c+')':'')+'.';
+  }
+  function setSyncError(e){
+    var c=(e && e.code)||'';
+    if(/unavailable/.test(c)){ sync.err=''; sync.live=false; }
+    else { sync.err=syncErrText(e); sync.live=false; }
+    updateSyncUi();
+  }
+  function pendingCount(){
+    var n=0;
+    Object.keys(sync.meta).forEach(function(k){ var m=sync.meta[k]; if((m.sh && m.ah!==m.sh) || (m.t && m.ah!=='T')) n++; });
+    return n;
+  }
+  function syncSummary(){
+    if(!sync.cfg || !sync.room) return {k:'off',t:'Chưa đồng bộ'};
+    var n=pendingCount();
+    if(sync.err) return {k:'err',t:'Lỗi đồng bộ'};
+    if(!sync.handle) return sync.startFailed ? {k:'off2',t:'Offline'} : {k:'wait',t:'Đang kết nối…'};
+    if(!sync.live) return {k:'off2',t:n?('Offline · '+n+' chờ gửi'):'Offline'};
+    if(n) return {k:'wait',t:'Đang gửi '+n+' thay đổi'};
+    return {k:'ok',t:'Đã đồng bộ'};
+  }
+  function timeStr(ms){
+    var d=new Date(ms);
+    return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')+' ngày '+String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0');
+  }
+  function updateSyncUi(){
+    var chip=document.getElementById('sync-chip'); if(!chip) return;
+    var s=syncSummary();
+    chip.className='sync-chip '+s.k;
+    document.getElementById('sync-chip-text').textContent=s.t;
+    var ov=document.getElementById('sync-overlay');
+    if(ov && !ov.hidden){
+      var a=document.activeElement;
+      if(!(a && (a.id==='sync-config' || a.id==='sync-join-code'))) renderSyncSheet();
+    }
+  }
+
+  // ----- kết nối -----
+  function loadScript(src){
+    return new Promise(function(resolve,reject){
+      var el=document.createElement('script'); el.src=src; el.async=false;
+      el.onload=function(){ resolve(); }; el.onerror=function(){ reject(new Error('load '+src)); };
+      document.head.appendChild(el);
+    });
+  }
+  function loadFirebaseSdk(){
+    if(window.firebase && window.firebase.initializeApp) return Promise.resolve();
+    return loadScript(SDK_BASE+'firebase-app-compat.min.js').then(function(){
+      return Promise.all([loadScript(SDK_BASE+'firebase-auth-compat.min.js'),loadScript(SDK_BASE+'firebase-firestore-compat.min.js')]);
+    });
+  }
+  function unavailableError(msg){ var er=new Error(msg); er.code='unavailable'; return er; }
+  var persistTried=false;
+  var firebaseAdapter={
+    start:function(cfg,room,h){
+      return loadFirebaseSdk().catch(function(){ throw unavailableError('Không tải được thư viện Firebase (cần mạng)'); })
+      .then(function(){
+        var fb=window.firebase, app;
+        try{ app=fb.app('cb-trip'); }catch(e){ app=fb.initializeApp(cfg,'cb-trip'); }
+        var db=app.firestore(), ready=Promise.resolve();
+        if(!persistTried){
+          persistTried=true;
+          try{ ready=Promise.resolve(db.enablePersistence({synchronizeTabs:true})).catch(function(){}); }catch(e){}
+        }
+        return ready.then(function(){
+          // đăng nhập ẩn danh giống file Tasks_Tracking. Nếu project không bật đăng nhập ẩn danh thì vẫn thử tiếp (Rules có thể đang mở)
+          return Promise.resolve().then(function(){ return app.auth().signInAnonymously(); }).catch(function(e){
+            var c=(e && e.code)||'';
+            if(/operation-not-allowed|admin-restricted/.test(c)) return null;
+            throw unavailableError('Chưa đăng nhập được (cần mạng)');
+          });
+        }).then(function(){
+          var ref=db.collection(SYNC_COL).doc(room);
+          var unsub=ref.onSnapshot({includeMetadataChanges:true},function(snap){
+            h.onSnapshot({exists:snap.exists,data:snap.exists?snap.data():null,fromCache:snap.metadata.fromCache});
+          },function(err){ h.onError(err); });
+          return {
+            push:function(changes){
+              var d={v:1,kind:'cb-trip',accountName:room};
+              Object.keys(changes).forEach(function(k){ d[k]=changes[k]; });
+              return ref.set(d,{merge:true});
+            },
+            stop:function(){ unsub(); }
+          };
+        });
+      });
+    }
+  };
+  function syncStart(){
+    if(!sync.cfg || !sync.room || sync.handle || sync.starting) return;
+    sync.starting=true; sync.err=''; updateSyncUi();
+    var factory=window.CB_SYNC_ADAPTER || firebaseAdapter, roomAtStart=sync.room;
+    Promise.resolve().then(function(){
+      return factory.start(sync.cfg, roomAtStart, {onSnapshot:onCloudSnapshot,onError:setSyncError});
+    }).then(function(hd){
+      sync.starting=false;
+      if(sync.room!==roomAtStart){ try{ hd.stop(); }catch(e){} return; }
+      sync.handle=hd; sync.startFailed=false; updateSyncUi(); scheduleTick();
+    }).catch(function(e){
+      sync.starting=false; sync.startFailed=true; sync.live=false;
+      var c=(e && e.code)||'';
+      sync.err = /unavailable/.test(c) ? '' : syncErrText(e);
+      updateSyncUi();
+    });
+  }
+  function syncStop(){
+    if(sync.handle){ try{ sync.handle.stop(); }catch(e){} }
+    sync.handle=null; sync.live=false; sync.starting=false; clearTimeout(sync.timer);
+  }
+  function connectRoom(room){
+    syncStop();
+    sync.room=room; sync.meta={}; sync.firstServer=false; sync.inflight={}; sync.err=''; sync.startFailed=false;
+    saveSync(); updateSyncUi(); syncStart();
+  }
+  function disconnectRoom(){
+    syncStop();
+    sync.room=null; sync.meta={}; sync.firstServer=false; sync.inflight={}; sync.err=''; sync.startFailed=false;
+    saveSync(); updateSyncUi();
+  }
+
+  // ----- cấu hình, mã phòng, liên kết mời -----
+  function validCfg(c){ return !!(c && typeof c==='object' && c.apiKey && c.projectId && c.appId); }
+  function validRoom(r){ return typeof r==='string' && /^(trip_)?[a-z0-9]{20,60}$/.test(r); }
+  function isPreset(){ return !!sync.cfg && canon(sync.cfg)===canon(CB_PRESET_CFG); }
+  function parseFirebaseConfig(text){
+    var cfg={}, re=/["']?([A-Za-z]+)["']?\s*:\s*["']([^"']*)["']/g, m;
+    var ok={apiKey:1,authDomain:1,projectId:1,storageBucket:1,messagingSenderId:1,appId:1,measurementId:1};
+    while((m=re.exec(text||''))){ if(ok[m[1]]) cfg[m[1]]=m[2]; }
+    return validCfg(cfg) ? cfg : null;
+  }
+  function randomRoom(){
+    var chars='abcdefghjkmnpqrstuvwxyz23456789', out='', arr=new Uint8Array(26);
+    if(window.crypto && window.crypto.getRandomValues) window.crypto.getRandomValues(arr);
+    else for(var k=0;k<26;k++) arr[k]=Math.floor(Math.random()*256);
+    for(var i=0;i<26;i++) out+=chars.charAt(arr[i]%chars.length);
+    return 'trip_'+out;
+  }
+  function b64uEnc(s){ return btoa(unescape(encodeURIComponent(s))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,''); }
+  function b64uDec(s){ s=s.replace(/-/g,'+').replace(/_/g,'/'); while(s.length%4) s+='='; return decodeURIComponent(escape(atob(s))); }
+  function inviteUrl(){
+    var o={r:sync.room}; if(!isPreset()) o.c=sync.cfg;   // cấu hình có sẵn trong file thì không cần nhét vào liên kết
+    return location.href.split('#')[0]+'#cb='+b64uEnc(JSON.stringify(o));
+  }
+  function readInvite(text){
+    var m=/#cb=([A-Za-z0-9_\-]+)/.exec(text||'');
+    if(!m) return null;
+    try{
+      var o=JSON.parse(b64uDec(m[1]));
+      if(o && validRoom(o.r) && (o.c ? validCfg(o.c) : true)) return {c:o.c||CB_PRESET_CFG, r:o.r};
+    }catch(e){}
+    return null;
+  }
+  function clearHash(){ try{ history.replaceState(null,'',location.pathname+location.search); }catch(e){} }
+  function copyText(text){
+    function fallback(){
+      var ok=false;
+      try{
+        var ta=document.createElement('textarea'); ta.value=text; ta.style.position='fixed'; ta.style.opacity='0';
+        document.body.appendChild(ta); ta.select(); ok=document.execCommand && document.execCommand('copy'); document.body.removeChild(ta);
+      }catch(e){}
+      showToast(ok ? 'Đã sao chép' : 'Không sao chép được, bấm giữ ô để chọn rồi copy');
+    }
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(text).then(function(){ showToast('Đã sao chép'); },fallback);
+    } else fallback();
+  }
+
+  // ----- popup đồng bộ -----
+  function helpHtml(open){
+    return '<details class="sync-help"'+(open?' open':'')+'><summary>Dữ liệu nằm ở đâu, và nếu báo lỗi</summary>'
+      +'<p class="sync-note">Dữ liệu chuyến đi lưu trong project Firebase <b>'+escapeHtml((sync.cfg&&sync.cfg.projectId)||'')+'</b>, collection <b>'+SYNC_COL+'</b>, tài liệu <b>'+escapeHtml(sync.room||'trip_…')+'</b>. Muốn xoá hẳn thì xoá tài liệu đó trong Firebase Console.</p>'
+      +'<p class="sync-note">Nếu nút trạng thái báo <b>Lỗi đồng bộ</b>, nguyên nhân thường là Rules của project chưa cho phép collection này, hoặc chưa bật đăng nhập ẩn danh (Authentication, Sign-in method, Anonymous). Thêm khối sau vào Rules hiện có, bên trong <code>match /databases/{database}/documents</code>, rồi Publish:</p>'
+      +'<pre class="rules" id="sync-rules">'+escapeHtml(FIRESTORE_RULES)+'</pre>'
+      +'<div class="sync-row"><button class="btn" type="button" data-sync="copy-rules">Sao chép đoạn Rules</button></div>'
+      +'<p class="sync-note">Chỉ thêm đoạn này nếu thật sự cần; nếu Rules của bạn đang cho phép <code>taskAccounts</code> sẵn thì app chạy được ngay, không phải chỉnh gì.</p></details>';
+  }
+  function renderSyncSheet(){
+    var box=document.getElementById('sync-body'); if(!box) return;
+    var old=box.querySelector('details.sync-help'), wasOpen=!!(old && old.open);
+    var s=syncSummary(), h='';
+    if(sync.invite){
+      h+='<p class="sync-note">Bạn được mời vào phòng chung của chuyến đi. Dữ liệu trên máy này sẽ được gộp với dữ liệu chung: mục nào trùng thì lấy bản chung, mục chỉ có trên máy này thì được thêm vào.'
+        +((sync.room && sync.room!==sync.invite.r) ? ' Bạn đang ở một phòng khác, tham gia sẽ ngắt phòng đó.' : '')+'</p>'
+        +'<div class="sync-row"><button class="btn" type="button" data-sync="dismiss-invite">Bỏ qua</button><button class="btn primary" type="button" data-sync="accept-invite">Tham gia</button></div>';
+    } else if(sync.room){
+      h+='<div class="sync-status"><span class="sync-dot sd-'+s.k+'"></span><span>'+escapeHtml(s.t)+'</span></div>';
+      if(sync.err) h+='<p class="sync-err">'+escapeHtml(sync.err)+'</p>';
+      else if(sync.lastOk) h+='<p class="sync-note">Lần đồng bộ gần nhất: '+escapeHtml(timeStr(sync.lastOk))+'</p>';
+      h+='<label class="sync-label" for="sync-link">Liên kết mời (gửi cho bạn đi cùng)</label>'
+        +'<input type="text" id="sync-link" readonly value="'+escapeHtml(inviteUrl())+'">'
+        +'<div class="sync-row"><button class="btn primary" type="button" data-sync="copy-invite">Sao chép liên kết</button></div>'
+        +'<p class="sync-note">Ai có liên kết này đều vào được dữ liệu chuyến đi, chỉ gửi cho người đi cùng. Mất mạng vẫn dùng bình thường, có mạng lại thì tự gửi. Hai người sửa cùng một mục cùng lúc thì bản sửa sau cùng được giữ.</p>'
+        +'<div class="sync-row"><button class="btn" type="button" data-sync="disconnect">Ngắt kết nối (giữ dữ liệu trên máy)</button></div>';
+    } else if(sync.cfg){
+      h+='<p class="sync-note">Tạo phòng trên máy đang có dữ liệu đầy đủ nhất (thường là máy của bạn), rồi gửi liên kết mời cho bạn đi cùng. Bạn ấy mở liên kết và bấm Tham gia là có cùng dữ liệu.</p>'
+        +'<div class="sync-row"><button class="btn primary" type="button" data-sync="create">Tạo phòng chung</button></div>'
+        +'<label class="sync-label" for="sync-join-code">Hoặc tham gia phòng của bạn đi cùng</label>'
+        +'<div class="sync-row"><input type="text" id="sync-join-code" placeholder="Dán mã phòng hoặc liên kết mời" autocomplete="off"><button class="btn" type="button" data-sync="join" style="flex:0 0 auto;padding:0 18px">Tham gia</button></div>'
+        +(isPreset() ? '' : '<div class="sync-row"><button class="link-btn" type="button" data-sync="edit-config">Đổi cấu hình Firebase</button></div>');
+    } else {
+      h+='<p class="sync-note">Dùng chung một bộ dữ liệu với bạn đi cùng qua Firebase Firestore (gói miễn phí). Cần tạo một project Firebase riêng, làm một lần khoảng 5 phút, xem hướng dẫn bên dưới.</p>'
+        +'<label class="sync-label" for="sync-config">Cấu hình Firebase</label>'
+        +'<textarea id="sync-config" rows="6" placeholder="Dán đoạn const firebaseConfig = { ... } vào đây"></textarea>'
+        +'<div class="sync-row"><button class="btn primary" type="button" data-sync="save-config">Lưu cấu hình</button></div>';
+    }
+    box.innerHTML=h+helpHtml(wasOpen);
+  }
+  function openSyncSheet(){ renderSyncSheet(); document.getElementById('sync-overlay').hidden=false; }
+  function closeSyncSheet(){ document.getElementById('sync-overlay').hidden=true; }
+  function onSyncAction(a){
+    if(a==='save-config'){
+      var cfg=parseFirebaseConfig(document.getElementById('sync-config').value);
+      if(!cfg){ showToast('Không đọc được cấu hình. Cần có apiKey, projectId và appId.'); return; }
+      sync.cfg=cfg; saveSync(); renderSyncSheet();
+    } else if(a==='edit-config'){
+      sync.cfg=null; saveSync(); renderSyncSheet();   // về trạng thái dán cấu hình mới
+    } else if(a==='create'){
+      connectRoom(randomRoom()); showToast('Đã tạo phòng. Gửi liên kết mời cho bạn đi cùng.');
+    } else if(a==='join'){
+      var v=(document.getElementById('sync-join-code').value||'').trim();
+      var inv=readInvite(v);
+      if(inv){ sync.cfg=inv.c; connectRoom(inv.r); showToast('Đang tham gia phòng chung'); return; }
+      if(/#cb=/.test(v)){ showToast('Liên kết không hợp lệ'); return; }
+      v=v.toLowerCase();
+      if(!validRoom(v)){ showToast('Mã phòng không hợp lệ'); return; }
+      connectRoom(v); showToast('Đang tham gia phòng chung');
+    } else if(a==='accept-invite'){
+      var iv=sync.invite; sync.invite=null; clearHash();
+      if(iv){ sync.cfg=iv.c; connectRoom(iv.r); showToast('Đã tham gia phòng chung'); }
+    } else if(a==='dismiss-invite'){
+      sync.invite=null; clearHash(); renderSyncSheet();
+    } else if(a==='copy-invite'){
+      copyText(inviteUrl());
+    } else if(a==='copy-rules'){
+      copyText(FIRESTORE_RULES);
+    } else if(a==='disconnect'){
+      disconnectRoom(); showToast('Đã ngắt kết nối. Dữ liệu vẫn còn trên máy này.');
+    }
+  }
+
+  // ---------- WIRING ----------
+  document.addEventListener('click',function(ev){
+    var btn=ev.target.closest?ev.target.closest('[data-action]'):null;
+    if(!btn) return;
+    var a=btn.dataset.action;
+    if(a==='toggle-day') toggleDay(btn.dataset.day);
+    else if(a==='edit-day') openEditDay(btn.dataset.day);
+    else if(a==='delete-day') deleteDay(btn.dataset.day);
+    else if(a==='add-stop') openStopModal(btn.dataset.day,null);
+    else if(a==='edit-stop') openStopModal(btn.dataset.day,btn.dataset.id);
+    else if(a==='delete-stop') deleteStop(btn.dataset.day,btn.dataset.id);
+    else if(a==='add-expense') openExpenseModal(btn.dataset.day,null);
+    else if(a==='edit-expense') openExpenseModal(null,btn.dataset.id);
+    else if(a==='delete-expense') deleteExpense(btn.dataset.id);
+    else if(a==='edit-prepaid') openPrepaidModal(btn.dataset.id);
+    else if(a==='delete-prepaid') deletePrepaid(btn.dataset.id);
+    else if(a==='toggle-map') toggleMap(btn.dataset.day,btn.dataset.id,btn);
+    else if(a==='toggle-pack') togglePack(btn.dataset.id);
+    else if(a==='edit-pack') openPackModal(btn.dataset.id);
+    else if(a==='delete-pack') deletePack(btn.dataset.id);
+    else if(a==='edit-note') openNoteModal(btn.dataset.id);
+    else if(a==='delete-note') deleteNote(btn.dataset.id);
+  });
+
+  document.getElementById('fab').addEventListener('click',function(){ openExpenseModal(null,null); });
+  document.getElementById('modal-close').addEventListener('click',closeExpenseModal);
+  document.getElementById('modal-save').addEventListener('click',saveExpense);
+  document.getElementById('modal-overlay').addEventListener('click',function(e){ if(e.target.id==='modal-overlay') closeExpenseModal(); });
+  document.getElementById('new-cat-confirm').addEventListener('click',confirmNewCategory);
+  document.getElementById('new-cat-input').addEventListener('keydown',function(e){ if(e.key==='Enter'){e.preventDefault();confirmNewCategory();} });
+  document.getElementById('f-amount').addEventListener('input',function(e){
+    var v=parseAmountInput(e.target.value);
+    document.getElementById('amount-preview').textContent=v?formatVND(v):'';
+  });
+
+  document.getElementById('stop-save').addEventListener('click',saveStop);
+  document.getElementById('stop-cancel').addEventListener('click',closeStopModal);
+  document.getElementById('stop-overlay').addEventListener('click',function(e){ if(e.target.id==='stop-overlay') closeStopModal(); });
+
+  document.getElementById('add-day-btn').addEventListener('click',addDay);
+  document.getElementById('day-edit-save').addEventListener('click',saveEditDay);
+  document.getElementById('day-edit-cancel').addEventListener('click',closeEditDay);
+  document.getElementById('day-edit-overlay').addEventListener('click',function(e){ if(e.target.id==='day-edit-overlay') closeEditDay(); });
+
+  document.getElementById('theme-toggle').addEventListener('click',toggleTheme);
+  document.getElementById('edit-trip-btn').addEventListener('click',openTripEdit);
+  document.getElementById('trip-edit-save').addEventListener('click',saveTripEdit);
+  document.getElementById('trip-edit-cancel').addEventListener('click',closeTripEdit);
+  document.getElementById('trip-edit-overlay').addEventListener('click',function(e){ if(e.target.id==='trip-edit-overlay') closeTripEdit(); });
+
+  document.getElementById('add-prepaid').addEventListener('click',function(){ openPrepaidModal(null); });
+  document.getElementById('prepaid-save').addEventListener('click',savePrepaid);
+  document.getElementById('prepaid-cancel').addEventListener('click',closePrepaidModal);
+  document.getElementById('prepaid-overlay').addEventListener('click',function(e){ if(e.target.id==='prepaid-overlay') closePrepaidModal(); });
+  document.getElementById('p-total').addEventListener('input',function(e){
+    var v=parseAmountInput(e.target.value);
+    document.getElementById('p-total-preview').textContent=v?formatVND(v):'';
+  });
+  document.getElementById('p-paid').addEventListener('input',function(e){
+    var v=parseAmountInput(e.target.value);
+    document.getElementById('p-paid-preview').textContent=v?formatVND(v):'';
+  });
+
+  document.getElementById('add-pack').addEventListener('click',function(){ openPackModal(null); });
+  document.getElementById('pack-save').addEventListener('click',savePack);
+  document.getElementById('pack-cancel').addEventListener('click',closePackModal);
+  document.getElementById('pack-overlay').addEventListener('click',function(e){ if(e.target.id==='pack-overlay') closePackModal(); });
+  document.getElementById('k-text').addEventListener('keydown',function(e){ if(e.key==='Enter'){ e.preventDefault(); savePack(); } });
+  document.getElementById('pack-reset').addEventListener('click',resetPackTicks);
+  document.getElementById('pack-clear').addEventListener('click',clearPacking);
+
+  document.getElementById('add-note').addEventListener('click',function(){ openNoteModal(null,'general'); });
+  document.getElementById('add-outfit').addEventListener('click',function(){ openNoteModal(null,'outfit'); });
+  document.getElementById('n-kind').addEventListener('change',function(e){ applyNoteKind(e.target.value); });
+  document.getElementById('note-save').addEventListener('click',saveNote);
+  document.getElementById('note-cancel').addEventListener('click',closeNoteModal);
+  document.getElementById('note-overlay').addEventListener('click',function(e){ if(e.target.id==='note-overlay') closeNoteModal(); });
+
+  document.getElementById('weather-refresh').addEventListener('click',function(){ fetchWeather(true); });
+  document.getElementById('sync-chip').addEventListener('click',openSyncSheet);
+  document.getElementById('sync-close').addEventListener('click',closeSyncSheet);
+  document.getElementById('sync-overlay').addEventListener('click',function(e){
+    if(e.target.id==='sync-overlay'){ closeSyncSheet(); return; }
+    var b=e.target.closest ? e.target.closest('[data-sync]') : null;
+    if(b) onSyncAction(b.dataset.sync);
+  });
+  window.addEventListener('online',function(){
+    if(sync.room && sync.cfg && !sync.handle){ sync.startFailed=false; syncStart(); }
+    updateSyncUi();
+  });
+  window.addEventListener('offline',function(){ sync.live=false; updateSyncUi(); });
+  document.addEventListener('visibilitychange',function(){
+    if(!document.hidden && sync.room && sync.cfg && !sync.handle && !sync.starting) syncStart();
+  });
+  setInterval(function(){
+    if(sync.room && sync.cfg && !sync.handle && !sync.starting && sync.startFailed) syncStart();
+  },30000);
+  document.getElementById('export-btn').addEventListener('click',exportData);
+  document.getElementById('import-trigger').addEventListener('click',function(){ document.getElementById('import-file').click(); });
+  document.getElementById('import-file').addEventListener('change',handleImportFile);
+  document.getElementById('import-cancel').addEventListener('click',cancelImport);
+  document.getElementById('import-confirm-btn').addEventListener('click',confirmImport);
+  document.getElementById('reset-link').addEventListener('click',showResetConfirm);
+  document.getElementById('reset-cancel').addEventListener('click',hideResetConfirm);
+  document.getElementById('reset-confirm-btn').addEventListener('click',doReset);
+
+  document.addEventListener('keydown',function(e){
+    if(e.key==='Escape'){
+      closeExpenseModal(); closeStopModal(); closeEditDay(); closeTripEdit();
+      closePrepaidModal(); closeNoteModal(); closePackModal(); closeSyncSheet();
+      hideResetConfirm(); cancelImport();
+    }
+  });
+
+  // ---------- OFFLINE (service worker) ----------
+  function isStandalone(){
+    return !!((window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || window.navigator.standalone);
+  }
+  function isIOS(){
+    var ua=navigator.userAgent||'';
+    return /iPhone|iPad|iPod/.test(ua) || (navigator.platform==='MacIntel' && navigator.maxTouchPoints>1);
+  }
+  function setOffline(kind,html){
+    var el=document.getElementById('offline-status'); if(!el) return;
+    el.className='offline-status '+kind; el.innerHTML=html;
+  }
+  function checkOffline(){
+    var secure = location.protocol==='https:' || location.hostname==='localhost' || location.hostname==='127.0.0.1';
+    if(!secure){   // trên http thường navigator.serviceWorker không tồn tại, nên kiểm tra https trước để báo đúng nguyên nhân
+      setOffline('bad','<b>Offline: chưa dùng được.</b> Cần mở app bằng địa chỉ bắt đầu bằng https:// để lưu trang dùng khi mất sóng.');
+      return;
+    }
+    if(!('serviceWorker' in navigator)){
+      setOffline('bad','<b>Offline: chưa dùng được.</b> Trình duyệt này không hỗ trợ lưu trang để mở khi mất sóng. Dữ liệu vẫn lưu trên máy, nhưng cần có mạng để mở app.');
+      return;
+    }
+    navigator.serviceWorker.getRegistration().then(function(reg){
+      if(!reg || !reg.active){ setOffline('bad','<b>Offline: đang chuẩn bị…</b> Giữ app mở vài giây khi có mạng.'); return; }
+      var target=new URL('index.html',reg.scope).href;
+      var look = window.caches ? window.caches.keys().then(function(keys){
+        var names=keys.filter(function(k){ return k.indexOf('cb-trip-shell')===0; });
+        if(!names.length) return null;
+        return window.caches.open(names[0]).then(function(c){ return c.match(target); });
+      }) : Promise.resolve(null);
+      return look.then(function(hit){
+        if(!hit){ setOffline('bad','<b>Offline: chưa sẵn sàng.</b> Mở app khi có mạng, chờ vài giây rồi mở lại trang này.'); return; }
+        var msg='<b>Offline: sẵn sàng.</b> Trang đã được lưu trên máy này, mở được cả khi mất sóng.';
+        if(isStandalone()) msg+=' Đang chạy dạng ứng dụng.';
+        else if(isIOS()) msg+=' iPhone sẽ xoá dữ liệu của trang nếu 7 ngày dùng Safari mà không mở nó: nên bấm Chia sẻ, chọn Thêm vào MH chính, rồi mở bằng biểu tượng.';
+        setOffline('ok',msg);
+      });
+    }).catch(function(){ setOffline('bad','<b>Offline: chưa kiểm tra được.</b>'); });
+  }
+  function registerSW(){
+    var secure = location.protocol==='https:' || location.hostname==='localhost' || location.hostname==='127.0.0.1';
+    if(!('serviceWorker' in navigator) || !secure){ checkOffline(); return; }
+    navigator.serviceWorker.register('sw.js').then(function(){
+      return navigator.serviceWorker.ready;
+    }).then(function(){ setTimeout(checkOffline,1500); }).catch(function(){ checkOffline(); });
+  }
+
+  // ---------- INIT ----------
+  function init(){
+    loadSync();
+    var loaded=loadState();
+    state=loaded||defaultState();
+    weatherCache=loadWeatherCache();
+    document.getElementById('loading').hidden=true;
+    document.getElementById('app-content').hidden=false;
+    document.getElementById('fab').hidden=false;
+    applyTheme(currentTheme(),false); // đồng bộ icon với theme đã đặt ở head
+    watchSystemTheme();
+    render();
+    if(state.notice==='dupe-flight'){
+      delete state.notice;
+      showToast('Bạn đã tự nhập vé máy bay nên tôi không thêm trùng. Tổng thực tế 2 chiều + hành lý cho 2 người: 5.684.724 đ.');
+    }
+    saveState(); // lưu luôn bản đã nâng cấp để lần sau không phải làm lại
+    var invite=readInvite(location.hash);
+    if(invite){
+      if(sync.room===invite.r) clearHash();
+      else { sync.invite=invite; openSyncSheet(); }
+    }
+    updateSyncUi();
+    if(sync.room && sync.cfg) syncStart();
+    if(document.readyState==='complete') registerSW(); else window.addEventListener('load',registerSW);
+    var stale = !weatherCache || (Date.now()-weatherCache.fetchedAt > 3*3600*1000);
+    if(stale) fetchWeather(false);
+  }
+  init();
+})();
+</script>
+</body>
+</html>
