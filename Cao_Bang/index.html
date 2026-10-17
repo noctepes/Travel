@@ -424,6 +424,24 @@
   .danger-link{font-size:13.5px;color:var(--muted);background:none;border:none;cursor:pointer;text-decoration:underline;padding:8px;font-family:inherit;}
   .confirm-panel{margin-top:10px;padding:14px;border:1px solid var(--danger-border);background:var(--danger-bg);border-radius:var(--radius-md);font-size:14.5px;color:var(--danger);text-align:left;}
   .confirm-panel .sheet-actions{margin-top:10px;}
+
+  /* ---------- có gì mới từ máy kia ---------- */
+  #news-banner{display:flex;align-items:center;gap:10px;width:100%;margin:0 0 16px;padding:12px 14px;
+    border:1px solid var(--border);border-left:4px solid var(--a-weather);border-radius:var(--radius-md);
+    background:var(--a-weather-bg);color:var(--text);font-size:15px;font-family:inherit;text-align:left;cursor:pointer;}
+  #news-banner[hidden]{display:none;}
+  #news-banner b{color:var(--a-weather);}
+  #news-banner .nb-go{margin-left:auto;font-size:14px;color:var(--a-weather);text-decoration:underline;white-space:nowrap;}
+  .news-list{list-style:none;margin:6px 0 0;padding:0;}
+  .news-item{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--hairline);font-size:15px;line-height:1.45;}
+  .news-item:last-child{border-bottom:none;}
+  .news-tag{flex-shrink:0;font-size:12.5px;font-weight:600;padding:2px 8px;border-radius:99px;}
+  .news-tag.add{background:var(--a-money-bg);color:var(--a-money);}
+  .news-tag.edit{background:var(--a-plan-bg);color:var(--a-plan);}
+  .news-tag.del{background:var(--danger-bg);color:var(--danger);}
+  .news-text{flex:1;min-width:0;overflow-wrap:anywhere;}
+  .news-time{display:block;font-size:12.5px;color:var(--muted);}
+  .news-item .btn{flex:0 0 auto;min-height:34px;padding:0 12px;font-size:14px;}
 </style>
 </head>
 <body>
@@ -451,6 +469,8 @@
         </div>
       </div>
     </div>
+
+    <button id="news-banner" type="button" hidden></button>
 
     <div class="layout">
       <aside class="col-side">
@@ -550,6 +570,15 @@
     <h2 class="sheet-title">Đồng bộ với bạn đi cùng</h2>
     <div id="sync-body"></div>
     <div class="sheet-actions"><button class="btn" id="sync-close" type="button">Đóng</button></div>
+  </div>
+</div>
+
+<!-- news sheet: thay đổi từ máy kia -->
+<div class="overlay" id="news-overlay" hidden>
+  <div class="sheet">
+    <h2 class="sheet-title">Máy kia đã thay đổi</h2>
+    <div id="news-body"></div>
+    <div class="sheet-actions"><button class="btn" id="news-close" type="button">Đóng</button><button class="btn primary" id="news-seen" type="button">Đã xem hết</button></div>
   </div>
 </div>
 
@@ -1495,12 +1524,12 @@
   }
 
   // ---------- TOAST ----------
-  function showToast(msg,undoFn){
+  function showToast(msg,undoFn,btnLabel){
     var region=document.getElementById('toast-region');
     var el=document.createElement('div'); el.className='toast';
     var span=document.createElement('span'); span.textContent=msg; el.appendChild(span);
     if(undoFn){
-      var b=document.createElement('button'); b.textContent='Hoàn tác';
+      var b=document.createElement('button'); b.textContent=btnLabel||'Hoàn tác';
       b.addEventListener('click',function(){ undoFn(); el.remove(); });
       el.appendChild(b);
     }
@@ -2199,7 +2228,7 @@
   }
 
   // ----- đám mây -> máy này -----
-  function syncApplyRemote(data){
+  function syncApplyRemote(data,track){
     if(!data) return false;
     var changed=false;
     SYNC_COLLS.concat(['meta']).forEach(function(coll){
@@ -2219,10 +2248,11 @@
         }
         if(win==='remote'){
           if(r.d){
-            if(loc){ removeLocal(coll,id); changed=true; }
+            if(loc){ if(track) newsAdd('del',coll,id,loc); removeLocal(coll,id); changed=true; }
             m.t=1; m.tu=r.u; m.sh=null; m.ah='T'; m.au=r.u;
           } else {
             var it=safeParse(r.j); if(!it || typeof it!=='object') return;
+            if(track && (!loc || hashOf(loc)!==hashOf(it))) newsAdd(loc?'edit':'add',coll,id,it);
             it._u=r.u; upsertLocal(coll,id,it); changed=true;
             m.t=0; m.sh=hashOf(it); m.ah=m.sh; m.au=r.u;
           }
@@ -2240,13 +2270,121 @@
     return changed;
   }
   function onCloudSnapshot(sn){
+    // lần tải đầu sau khi vào phòng là gộp dữ liệu, không tính là "máy kia thay đổi"
+    var track=sync.firstServer;
     if(!sn.fromCache && !sync.firstServer) sync.firstServer=true;
     var changed=false;
-    if(sn.exists && sn.data) changed=syncApplyRemote(sn.data);
+    if(sn.exists && sn.data) changed=syncApplyRemote(sn.data,track);
     sync.live=!sn.fromCache;
     if(!sn.fromCache){ sync.lastOk=Date.now(); sync.err=''; }
     if(changed){ persistLocal(); render(); }
     saveSync(); updateSyncUi(); scheduleTick();
+    if(newsFresh.length){
+      var fresh=newsFresh; newsFresh=[];
+      saveNews(); renderNews();
+      // lúc mới mở app chỉ hiện dải "có gì mới", không bắn thông báo; đang mở app thì báo ngay
+      if(newsLiveSeen && !document.hidden) toastNews(fresh);
+    }
+    if(!sn.fromCache) newsLiveSeen=true;
+  }
+
+  // ----- có gì mới từ máy kia (lưu trên máy này tới khi bấm "Đã xem hết") -----
+  var NEWS_KEY='cb-trip-news-v1', NEWS_MAX=200;
+  var news=[], newsFresh=[], newsLiveSeen=false;
+  function loadNews(){
+    news=[];
+    try{
+      var o=JSON.parse(localStorage.getItem(NEWS_KEY)||'null');
+      if(o && o.room===sync.room && Array.isArray(o.items)) news=o.items;
+    }catch(e){}
+  }
+  function saveNews(){
+    try{ localStorage.setItem(NEWS_KEY, JSON.stringify({room:sync.room,items:news})); }catch(e){}
+  }
+  function clearNews(){ news=[]; newsFresh=[]; saveNews(); renderNews(); }
+  function newsAdd(k,coll,id,it){
+    var key=coll+':'+id, old=null;
+    for(var i=0;i<news.length;i++){ if(news[i].c+':'+news[i].id===key){ old=news.splice(i,1)[0]; break; } }
+    newsFresh=newsFresh.filter(function(n){ return n.c+':'+n.id!==key; });
+    if(old && old.k==='add' && k==='del') return;   // vừa thêm rồi xoá luôn: coi như không có gì
+    if(old && old.k==='add' && k==='edit') k='add';
+    var n={k:k,c:coll,id:id,at:Date.now(),it:JSON.parse(JSON.stringify(it))};
+    news.push(n); newsFresh.push(n);
+    if(news.length>NEWS_MAX) news=news.slice(-NEWS_MAX);
+  }
+  function shortDate(d){ var p=String(d||'').split('-'); return p.length===3 ? p[2]+'/'+p[1] : ''; }
+  function newsDayText(dayId){
+    var d=findLocal('days',String(dayId));
+    if(!d) for(var i=0;i<news.length;i++){ if(news[i].c==='days' && news[i].id===String(dayId)){ d=news[i].it; break; } }
+    return d ? ' · ngày '+shortDate(d.date) : '';
+  }
+  function newsLabel(n){
+    var it=n.it||{};
+    switch(n.c){
+      case 'expenses': return 'Khoản chi “'+(it.note||catInfo(it.category).name)+'” · '+formatVND(it.amount)+newsDayText(it.dayId);
+      case 'prepaid': return 'Khoản trả trước “'+(it.name||'')+'” · '+formatVND(it.total);
+      case 'notes': return 'Ghi chú “'+(it.title||'không tiêu đề')+'”';
+      case 'packing': return 'Đồ mang theo “'+(it.text||'')+'”'+(n.k==='edit' ? (it.done?' · đã soạn xong':' · chưa soạn') : '');
+      case 'days': return 'Ngày '+shortDate(it.date)+(it.label?' “'+it.label+'”':'');
+      case 'categories': return 'Hạng mục “'+(it.name||'')+'”';
+      case 'meta': return 'Thông tin chuyến đi';
+    }
+    return 'Một mục';
+  }
+  var NEWS_VERB={add:'Thêm',edit:'Sửa',del:'Xoá'};
+  function toastNews(fresh){
+    if(fresh.length===1){
+      var n=fresh[0];
+      var msg='Máy kia vừa '+NEWS_VERB[n.k].toLowerCase()+': '+newsLabel(n);
+      if(n.k==='del') showToast(msg,function(){ undoNews(n); });
+      else showToast(msg,openNews,'Xem');
+    } else {
+      showToast('Máy kia vừa có '+fresh.length+' thay đổi',openNews,'Xem');
+    }
+  }
+  function renderNews(){
+    var b=document.getElementById('news-banner'); if(!b) return;
+    if(!news.length){ b.hidden=true; }
+    else {
+      var cnt={add:0,edit:0,del:0}; news.forEach(function(n){ cnt[n.k]++; });
+      var parts=[]; if(cnt.add) parts.push(cnt.add+' thêm'); if(cnt.edit) parts.push(cnt.edit+' sửa'); if(cnt.del) parts.push(cnt.del+' xoá');
+      b.innerHTML='<span><b>Máy kia có '+news.length+' thay đổi</b> từ lần bạn xem trước ('+parts.join(', ')+')</span><span class="nb-go">Xem</span>';
+      b.hidden=false;
+    }
+    var ov=document.getElementById('news-overlay');
+    if(ov && !ov.hidden){ if(!news.length) closeNews(); else renderNewsSheet(); }
+  }
+  function renderNewsSheet(){
+    var box=document.getElementById('news-body'); if(!box) return;
+    var h='<p class="sync-note">Những gì người đi cùng đã thêm, sửa, xoá mà bạn chưa xem. Mục bị xoá có thể khôi phục bằng nút Hoàn tác.</p><ul class="news-list">';
+    news.slice().reverse().forEach(function(n){
+      h+='<li class="news-item"><span class="news-tag '+n.k+'">'+NEWS_VERB[n.k]+'</span>'
+        +'<span class="news-text">'+escapeHtml(newsLabel(n))+'<span class="news-time">'+escapeHtml(timeStr(n.at))+'</span></span>'
+        +(n.k==='del' ? '<button class="btn" type="button" data-undo="'+escapeHtml(n.c+':'+n.id)+'">Hoàn tác</button>' : '')
+        +'</li>';
+    });
+    box.innerHTML=h+'</ul>';
+  }
+  function openNews(){ if(!news.length) return; renderNewsSheet(); document.getElementById('news-overlay').hidden=false; }
+  function closeNews(){ document.getElementById('news-overlay').hidden=true; }
+  function findNewsDel(coll,id){
+    for(var i=0;i<news.length;i++){ if(news[i].k==='del' && news[i].c===coll && news[i].id===String(id)) return news[i]; }
+    return null;
+  }
+  function restoreNews(n){
+    news=news.filter(function(x){ return x!==n; });
+    if(!findLocal(n.c,n.id)) upsertLocal(n.c,n.id,JSON.parse(JSON.stringify(n.it)));
+  }
+  function undoNews(n){
+    if(news.indexOf(n)<0) return;
+    restoreNews(n);
+    // khôi phục khoản chi thì khôi phục luôn ngày của nó nếu ngày cũng bị xoá, và ngược lại
+    if(n.c==='expenses'){ var d=findNewsDel('days',n.it.dayId); if(d) restoreNews(d); }
+    if(n.c==='days'){
+      news.filter(function(x){ return x.k==='del' && x.c==='expenses' && String(x.it.dayId)===n.id; }).forEach(restoreNews);
+    }
+    sortByC(); render(); saveState(); saveNews(); renderNews();
+    showToast('Đã khôi phục');
   }
 
   // ----- trạng thái + lỗi -----
@@ -2368,12 +2506,12 @@
   function connectRoom(room){
     syncStop();
     sync.room=room; sync.meta={}; sync.firstServer=false; sync.inflight={}; sync.err=''; sync.startFailed=false;
-    saveSync(); updateSyncUi(); syncStart();
+    clearNews(); saveSync(); updateSyncUi(); syncStart();
   }
   function disconnectRoom(){
     syncStop();
     sync.room=null; sync.meta={}; sync.firstServer=false; sync.inflight={}; sync.err=''; sync.startFailed=false;
-    saveSync(); updateSyncUi();
+    clearNews(); saveSync(); updateSyncUi();
   }
 
   // ----- cấu hình, mã phòng, liên kết mời -----
@@ -2577,6 +2715,16 @@
   document.getElementById('weather-refresh').addEventListener('click',function(){ fetchWeather(true); });
   document.getElementById('sync-chip').addEventListener('click',openSyncSheet);
   document.getElementById('sync-close').addEventListener('click',closeSyncSheet);
+  document.getElementById('news-banner').addEventListener('click',openNews);
+  document.getElementById('news-close').addEventListener('click',closeNews);
+  document.getElementById('news-seen').addEventListener('click',function(){ closeNews(); clearNews(); });
+  document.getElementById('news-overlay').addEventListener('click',function(e){
+    if(e.target.id==='news-overlay'){ closeNews(); return; }
+    var b=e.target.closest ? e.target.closest('[data-undo]') : null;
+    if(!b) return;
+    var key=b.dataset.undo;
+    for(var i=0;i<news.length;i++){ if(news[i].c+':'+news[i].id===key){ undoNews(news[i]); break; } }
+  });
   document.getElementById('sync-overlay').addEventListener('click',function(e){
     if(e.target.id==='sync-overlay'){ closeSyncSheet(); return; }
     var b=e.target.closest ? e.target.closest('[data-sync]') : null;
@@ -2605,7 +2753,7 @@
   document.addEventListener('keydown',function(e){
     if(e.key==='Escape'){
       closeExpenseModal(); closeStopModal(); closeEditDay(); closeTripEdit();
-      closePrepaidModal(); closeNoteModal(); closePackModal(); closeSyncSheet();
+      closePrepaidModal(); closeNoteModal(); closePackModal(); closeSyncSheet(); closeNews();
       hideResetConfirm(); cancelImport();
     }
   });
@@ -2660,6 +2808,7 @@
   // ---------- INIT ----------
   function init(){
     loadSync();
+    loadNews();
     var loaded=loadState();
     state=loaded||defaultState();
     weatherCache=loadWeatherCache();
@@ -2679,7 +2828,7 @@
       if(sync.room===invite.r) clearHash();
       else { sync.invite=invite; openSyncSheet(); }
     }
-    updateSyncUi();
+    updateSyncUi(); renderNews();
     if(sync.room && sync.cfg) syncStart();
     if(document.readyState==='complete') registerSW(); else window.addEventListener('load',registerSW);
     var stale = !weatherCache || (Date.now()-weatherCache.fetchedAt > 3*3600*1000);
