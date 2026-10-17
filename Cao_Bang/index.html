@@ -193,11 +193,32 @@
 
   /* ---------- weather ---------- */
   .refresh-btn{width:30px;height:30px;min-width:30px;border:none;background:none;}
-  .weather-panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);padding:14px;}
-  .weather-region{font-size:15px;margin-bottom:3px;}
-  .weather-now{font-family:var(--font-serif);font-size:29px;letter-spacing:-0.02em;font-variant-numeric:tabular-nums;color:var(--a-weather);}
-  .weather-desc{font-size:14.5px;color:var(--muted);margin-top:2px;text-wrap:pretty;}
-  .weather-meta{font-size:13px;color:var(--muted);margin-top:9px;padding-top:9px;border-top:1px solid var(--border);text-wrap:pretty;}
+  .weather-panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);overflow:hidden;}
+  .wx-tabs{display:flex;gap:6px;overflow-x:auto;padding:12px 14px 0;scrollbar-width:none;}
+  .wx-tabs::-webkit-scrollbar{display:none;}
+  .wx-tab{flex:0 0 auto;min-height:32px;padding:0 12px;border:1px solid var(--border);border-radius:99px;background:var(--surface);
+    color:var(--muted);font-size:13.5px;font-family:inherit;cursor:pointer;white-space:nowrap;}
+  .wx-tab.on{background:var(--a-weather);border-color:var(--a-weather);color:var(--surface);font-weight:600;}
+  .wx-hero{display:flex;align-items:center;gap:14px;padding:14px 14px 4px;}
+  .wx-hero svg{flex-shrink:0;color:var(--a-weather);}
+  .wx-temp{font-family:var(--font-serif);font-size:52px;line-height:1;letter-spacing:-0.03em;font-variant-numeric:tabular-nums;color:var(--text);}
+  .wx-hero-text{min-width:0;}
+  .wx-cond{font-size:16px;font-weight:600;color:var(--text);text-wrap:pretty;}
+  .wx-sub{font-size:13.5px;color:var(--muted);margin-top:3px;text-wrap:pretty;font-variant-numeric:tabular-nums;}
+  .wx-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;padding:10px 14px 12px;}
+  .wx-stat{background:var(--a-weather-bg);border-radius:var(--radius-sm);padding:7px 9px;min-width:0;}
+  .wx-stat span{display:block;font-size:12px;color:var(--muted);}
+  .wx-stat b{display:block;font-size:15px;font-weight:600;font-variant-numeric:tabular-nums;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .wx-hours{display:flex;overflow-x:auto;border-top:1px solid var(--border);padding:10px 6px;scrollbar-width:thin;}
+  .wx-hour{flex:0 0 54px;display:flex;flex-direction:column;align-items:center;gap:4px;font-variant-numeric:tabular-nums;}
+  .wx-hour svg{color:var(--a-weather);}
+  .wx-h-time{font-size:12px;color:var(--muted);}
+  .wx-h-time.now{color:var(--a-weather);font-weight:600;}
+  .wx-h-temp{font-size:14.5px;font-weight:600;color:var(--text);}
+  .wx-h-rain{font-size:11.5px;color:var(--a-weather);min-height:14px;}
+  .weather-desc{font-size:14.5px;color:var(--muted);padding:14px;text-wrap:pretty;}
+  .weather-meta{font-size:13px;color:var(--muted);padding:9px 14px;border-top:1px solid var(--border);text-wrap:pretty;line-height:1.5;}
+  .weather-meta.old{color:var(--warn);}
   .weather-chip{
     font-size:13px;color:var(--a-weather);font-weight:600;font-variant-numeric:tabular-nums;
     white-space:nowrap;padding:2px 8px;background:var(--a-weather-bg);border-radius:99px;
@@ -1224,12 +1245,25 @@
     };
   }
 
+  function weatherStale(){
+    if(!weatherCache || !weatherCache.fetchedAt || !weatherCache.data) return true;
+    var any=weatherCache.data['cao-bang']; if(!any || !any.cur) return true;   // bản lưu cũ chưa có nhiệt độ hiện tại
+    return Date.now()-weatherCache.fetchedAt > 30*60000;
+  }
+  var weatherLoading=false;
   async function fetchWeather(manual){
+    if(weatherLoading) return;
+    weatherLoading=true;
+    try{ await fetchWeatherNow(manual); } finally { weatherLoading=false; }
+  }
+  async function fetchWeatherNow(manual){
     var keys = Object.keys(REGIONS);
     var lats = keys.map(function(k){return REGIONS[k].lat;}).join(',');
     var lngs = keys.map(function(k){return REGIONS[k].lng;}).join(',');
     var url = 'https://api.open-meteo.com/v1/forecast'
       + '?latitude='+lats+'&longitude='+lngs
+      + '&current=temperature_2m,apparent_temperature,relative_humidity_2m,weather_code,wind_speed_10m,is_day'
+      + '&hourly=temperature_2m,weather_code,precipitation_probability,is_day'
       + '&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max'
       + '&timezone=Asia%2FBangkok&forecast_days=16';
     try{
@@ -1248,6 +1282,11 @@
           min:item.daily.temperature_2m_min,
           rain:item.daily.precipitation_probability_max
         };
+        var c=item.current, h=item.hourly;
+        if(c) data[k].cur={time:c.time,t:c.temperature_2m,feel:c.apparent_temperature,hum:c.relative_humidity_2m,code:c.weather_code,wind:c.wind_speed_10m,day:c.is_day};
+        // giữ 3 ngày theo giờ là đủ, đỡ nặng bộ nhớ máy
+        if(h && h.time) data[k].hourly={time:h.time.slice(0,72),t:h.temperature_2m.slice(0,72),code:h.weather_code.slice(0,72),
+          rain:(h.precipitation_probability||[]).slice(0,72),day:(h.is_day||[]).slice(0,72)};
       });
       weatherCache = {fetchedAt:Date.now(), data:data};
       saveWeatherCache();
@@ -1265,44 +1304,112 @@
     return days.length ? days[days.length-1].region : 'cao-bang';
   }
 
+  // icon thời tiết theo mã WMO, nét vẽ cùng kiểu với các icon khác trong app
+  var WX_PATH={
+    sun:'<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/>',
+    moon:'<path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>',
+    cloudSun:'<path d="M12 2v2M4.93 4.93l1.41 1.41M20 12h2M19.07 4.93l-1.41 1.41"/><path d="M15.95 12.65a4 4 0 0 0-5.93-4.13"/><path d="M13 22H7a5 5 0 1 1 4.9-6H13a3 3 0 0 1 0 6Z"/>',
+    cloudMoon:'<path d="M13 16a3 3 0 1 1 0 6H7a5 5 0 1 1 4.9-6Z"/><path d="M10.1 9A6 6 0 0 1 16 4a4.24 4.24 0 0 0 6 6 6 6 0 0 1-3 5.2"/>',
+    cloud:'<path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/>',
+    fog:'<path d="M4 14.9A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.24"/><path d="M16 17H7M17 21H9"/>',
+    rain:'<path d="M4 14.9A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.24"/><path d="M16 14v6M8 14v6M12 16v6"/>',
+    snow:'<path d="M4 14.9A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.24"/><path d="M8 15h.01M8 19h.01M12 17h.01M12 21h.01M16 15h.01M16 19h.01"/>',
+    storm:'<path d="M6 16.33A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 .5 8.97"/><path d="m13 12-3 5h4l-3 5"/>'
+  };
+  function wxIcon(code,isDay,size){
+    var k;
+    if(code===0||code===1) k=isDay===0?'moon':'sun';
+    else if(code===2) k=isDay===0?'cloudMoon':'cloudSun';
+    else if(code===3) k='cloud';
+    else if(code===45||code===48) k='fog';
+    else if(code>=95) k='storm';
+    else if((code>=71&&code<=77)||code===85||code===86) k='snow';
+    else if(code>=51) k='rain';
+    else k='cloud';
+    return '<svg width="'+size+'" height="'+size+'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+WX_PATH[k]+'</svg>';
+  }
+  function hourKeyNow(){
+    var d=new Date();
+    return todayStr()+'T'+String(d.getHours()).padStart(2,'0')+':00';
+  }
+  function agoText(ms){
+    var m=Math.round((Date.now()-ms)/60000);
+    if(m<1) return 'vừa xong';
+    if(m<60) return m+' phút trước';
+    var h=Math.floor(m/60);
+    if(h<24) return h+' giờ trước';
+    return Math.floor(h/24)+' ngày trước';
+  }
+  var weatherRegion=null; // null: tự chọn theo lịch trình
+
   function renderWeather(){
     var panel = document.getElementById('weather-panel');
-    var key = activeRegionKey();
-    var region = REGIONS[key] || REGIONS['cao-bang'];
+    var auto = activeRegionKey();
+    var key = (weatherRegion && REGIONS[weatherRegion]) ? weatherRegion : (REGIONS[auto] ? auto : 'cao-bang');
     var days = sortedDays();
     var firstDate = days.length ? days[0].date : null;
-    var html = '<div class="weather-region">Tại '+escapeHtml(region.name)+'</div>';
+    var r = weatherCache && weatherCache.data ? weatherCache.data[key] : null;
 
-    var todayFc = forecastFor(key, todayStr());
-    var tripFc = firstDate ? forecastFor(key, firstDate) : null;
-    var shown = todayFc || tripFc;
-    var shownLabel = todayFc ? 'hôm nay' : (tripFc ? 'ngày đầu chuyến' : null);
+    // chọn điểm đến: điểm theo lịch trình đứng đầu
+    var order=[auto].concat(Object.keys(REGIONS).filter(function(k){ return k!==auto; })).filter(function(k){ return REGIONS[k]; });
+    var html='<div class="wx-tabs" role="tablist">';
+    order.forEach(function(k){
+      html+='<button type="button" class="wx-tab'+(k===key?' on':'')+'" role="tab" aria-selected="'+(k===key)+'" data-wx-region="'+k+'">'+escapeHtml(REGIONS[k].name)+'</button>';
+    });
+    html+='</div>';
 
-    if(shown){
-      html += '<div class="weather-now">'+Math.round(shown.min)+'° – '+Math.round(shown.max)+'°</div>';
-      html += '<div class="weather-desc">'+escapeHtml(WMO[shown.code]||'Không rõ')
-            + (shown.rain!=null ? ' · khả năng mưa '+shown.rain+'%' : '')
-            + ' ('+shownLabel+')</div>';
+    // "bây giờ": số đo hiện tại nếu còn mới (dưới 90 phút), không thì lấy dự báo theo giờ của giờ này
+    var now=null, fromHourly=false, hk=hourKeyNow(), hi=-1;
+    if(r && r.hourly) hi=r.hourly.time.indexOf(hk);
+    var fresh = weatherCache && weatherCache.fetchedAt && (Date.now()-weatherCache.fetchedAt < 90*60000);
+    if(r && r.cur && (fresh || hi<0)) now=r.cur;
+    else if(hi>=0){ now={t:r.hourly.t[hi],code:r.hourly.code[hi],day:r.hourly.day[hi]}; fromHourly=true; }
+
+    var todayFc = r ? forecastFor(key, todayStr()) : null;
+    if(now){
+      html+='<div class="wx-hero">'+wxIcon(now.code,now.day,46)
+        +'<div class="wx-temp">'+Math.round(now.t)+'°</div>'
+        +'<div class="wx-hero-text"><div class="wx-cond">'+escapeHtml(WMO[now.code]||'Không rõ')+'</div>'
+        +(todayFc ? '<div class="wx-sub">Hôm nay '+Math.round(todayFc.min)+'° – '+Math.round(todayFc.max)+'°</div>' : '')
+        +'</div></div>';
+      if(!fromHourly && now.feel!=null){
+        html+='<div class="wx-stats">'
+          +'<div class="wx-stat"><span>Cảm giác</span><b>'+Math.round(now.feel)+'°</b></div>'
+          +'<div class="wx-stat"><span>Độ ẩm</span><b>'+Math.round(now.hum)+'%</b></div>'
+          +'<div class="wx-stat"><span>Gió</span><b>'+Math.round(now.wind)+' km/h</b></div>'
+          +'</div>';
+      } else if(todayFc && todayFc.rain!=null){
+        html+='<div class="wx-stats"><div class="wx-stat"><span>Khả năng mưa hôm nay</span><b>'+todayFc.rain+'%</b></div></div>';
+      }
+      // 12 giờ tới
+      if(hi>=0){
+        html+='<div class="wx-hours">';
+        for(var i=hi;i<Math.min(hi+13,r.hourly.time.length);i++){
+          var rain=r.hourly.rain[i];
+          html+='<div class="wx-hour"><span class="wx-h-time'+(i===hi?' now':'')+'">'+(i===hi?'Giờ này':(parseInt(r.hourly.time[i].slice(11,13),10)+'h'))+'</span>'
+            +wxIcon(r.hourly.code[i],r.hourly.day[i],22)
+            +'<span class="wx-h-temp">'+Math.round(r.hourly.t[i])+'°</span>'
+            +'<span class="wx-h-rain">'+(rain>=20?rain+'%':'')+'</span></div>';
+        }
+        html+='</div>';
+      }
     } else {
-      html += '<div class="weather-desc">Chưa có dự báo cho khu vực này.</div>';
+      html+='<div class="weather-desc">'+(weatherCache ? 'Chưa có dữ liệu cho '+escapeHtml(REGIONS[key].name)+'. Bấm nút làm mới khi có mạng.' : 'Chưa tải được thời tiết. Bấm nút làm mới khi có mạng.')+'</div>';
     }
 
     if(firstDate){
-      var start=new Date(firstDate+'T00:00:00'), now=new Date(); now.setHours(0,0,0,0);
-      var diff=Math.round((start-now)/86400000);
+      var start=new Date(firstDate+'T00:00:00'), d0=new Date(); d0.setHours(0,0,0,0);
+      var diff=Math.round((start-d0)/86400000);
       if(diff>16){
-        html += '<div class="weather-meta">Còn '+diff+' ngày nữa mới khởi hành. Dự báo chỉ có trong 16 ngày tới, các ngày trong chuyến sẽ tự hiện khi đến gần. Cuối tháng 11 ở Cao Bằng thường khô ráo, ban ngày 18–24°C, sáng sớm và đêm 10–15°C, vùng cao lạnh hơn.</div>';
+        html += '<div class="weather-meta">Còn '+diff+' ngày nữa khởi hành, dự báo cho các ngày trong chuyến sẽ tự hiện khi còn dưới 16 ngày. Cuối tháng 11 ở Cao Bằng thường khô, ban ngày 18–24°C, sáng sớm và đêm 10–15°C, vùng cao lạnh hơn.</div>';
       } else if(diff>0){
         html += '<div class="weather-meta">Còn '+diff+' ngày nữa khởi hành.</div>';
       }
     }
     if(weatherCache && weatherCache.fetchedAt){
-      var d=new Date(weatherCache.fetchedAt);
-      html += '<div class="weather-meta">Cập nhật lúc '+String(d.getHours()).padStart(2,'0')+':'
-            + String(d.getMinutes()).padStart(2,'0')+' ngày '+String(d.getDate()).padStart(2,'0')+'/'
-            + String(d.getMonth()+1).padStart(2,'0')+'.</div>';
-    } else {
-      html += '<div class="weather-meta">Chưa tải được dự báo. Bấm nút làm mới khi có mạng.</div>';
+      html += '<div class="weather-meta'+(fresh?'':' old')+'">Cập nhật '+agoText(weatherCache.fetchedAt)
+        + (fromHourly ? ', đang hiện số dự báo cho giờ này vì chưa tải lại được' : '')
+        + '. Số liệu từ mô hình thời tiết Open-Meteo, có thể lệch vài độ so với nhiệt kế tại chỗ.</div>';
     }
     panel.innerHTML = html;
   }
@@ -2713,6 +2820,14 @@
   document.getElementById('note-overlay').addEventListener('click',function(e){ if(e.target.id==='note-overlay') closeNoteModal(); });
 
   document.getElementById('weather-refresh').addEventListener('click',function(){ fetchWeather(true); });
+  document.getElementById('weather-panel').addEventListener('click',function(e){
+    var b=e.target.closest ? e.target.closest('[data-wx-region]') : null;
+    if(!b) return;
+    weatherRegion=b.dataset.wxRegion; renderWeather();
+  });
+  // nhiệt độ hiện tại cần mới: mở lại app hoặc để lâu thì tự tải lại
+  document.addEventListener('visibilitychange',function(){ if(!document.hidden && weatherStale()) fetchWeather(false); });
+  setInterval(function(){ if(!document.hidden){ if(weatherStale()) fetchWeather(false); else renderWeather(); } },5*60000);
   document.getElementById('sync-chip').addEventListener('click',openSyncSheet);
   document.getElementById('sync-close').addEventListener('click',closeSyncSheet);
   document.getElementById('news-banner').addEventListener('click',openNews);
@@ -2831,8 +2946,7 @@
     updateSyncUi(); renderNews();
     if(sync.room && sync.cfg) syncStart();
     if(document.readyState==='complete') registerSW(); else window.addEventListener('load',registerSW);
-    var stale = !weatherCache || (Date.now()-weatherCache.fetchedAt > 3*3600*1000);
-    if(stale) fetchWeather(false);
+    if(weatherStale()) fetchWeather(false);
   }
   init();
 })();
