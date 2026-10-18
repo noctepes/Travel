@@ -290,6 +290,8 @@
   .pack-actions .icon-btn{width:34px;height:34px;min-width:34px;border:none;background:none;}
   .pack-foot{text-align:right;}
   textarea{resize:vertical;min-height:84px;line-height:1.5;}
+  /* ô ghi chú tự cao theo nội dung, quá dài thì cuộn bên trong ô */
+  textarea.autogrow{min-height:64px;max-height:45vh;max-height:45dvh;overflow-y:auto;resize:none;overflow-wrap:anywhere;}
   .note-tag{display:inline-block;margin-top:8px;font-size:13px;padding:3px 10px;border-radius:99px;background:var(--a-plan-bg);color:var(--a-plan);}
 
   /* ---------- notes ---------- */
@@ -416,7 +418,7 @@
   .overlay{position:fixed;inset:0;background:var(--overlay-bg);display:flex;align-items:flex-end;justify-content:center;z-index:50;}
   @media(min-width:600px){.overlay{align-items:center;}}
   .sheet{
-    background:var(--surface);width:100%;max-width:460px;border-radius:18px 18px 0 0;
+    background:var(--surface);width:100%;max-width:560px;border-radius:18px 18px 0 0;
     padding:20px 18px calc(20px + env(safe-area-inset-bottom,0px));max-height:88vh;max-height:88dvh;overflow-y:auto;
   }
   @media(min-width:600px){.sheet{border-radius:16px;}}
@@ -686,7 +688,7 @@
     </div>
     <div class="field">
       <label for="s-note">Ghi chú (tuỳ chọn)</label>
-      <input type="text" id="s-note" placeholder="VD: Vé 45k, đi thuyền thêm 50k">
+      <textarea id="s-note" class="autogrow" rows="2" placeholder="VD: Vé 45k, đi thuyền thêm 50k"></textarea>
     </div>
     <div class="field">
       <label for="s-coords">Toạ độ (tuỳ chọn)</label>
@@ -721,7 +723,7 @@
     </div>
     <div class="field">
       <label for="p-note">Ghi chú (tuỳ chọn)</label>
-      <input type="text" id="p-note" placeholder="VD: Chuyển khoản 10/11, mã đặt phòng ABC123">
+      <textarea id="p-note" class="autogrow" rows="2" placeholder="VD: Chuyển khoản 10/11, mã đặt phòng ABC123, số điện thoại chủ nhà, link…"></textarea>
     </div>
     <div class="sheet-actions">
       <button class="btn" id="prepaid-cancel">Huỷ</button>
@@ -768,7 +770,7 @@
     </div>
     <div class="field">
       <label for="n-body" id="n-body-label">Nội dung</label>
-      <textarea id="n-body" rows="4" placeholder="VD: Đón tại Nội Bài, phụ thu 200k/xe"></textarea>
+      <textarea id="n-body" class="autogrow" rows="4" placeholder="VD: Đón tại Nội Bài, phụ thu 200k/xe"></textarea>
     </div>
     <div class="field">
       <label for="n-day">Gắn với ngày (tuỳ chọn)</label>
@@ -1547,6 +1549,14 @@
   }
 
   // link dài trong ghi chú: hiện thành nhãn ngắn theo tên miền, bấm để mở
+  function autogrow(el){
+    if(!el) return;
+    el.style.height='auto';
+    el.style.height=(el.scrollHeight+2)+'px';
+  }
+  document.addEventListener('input',function(e){ if(e.target.classList && e.target.classList.contains('autogrow')) autogrow(e.target); });
+  // popup vừa mở và điền sẵn nội dung: chờ hiển thị xong rồi đo chiều cao
+  function growAll(){ requestAnimationFrame(function(){ document.querySelectorAll('textarea.autogrow').forEach(autogrow); }); }
   function linkify(text){
     var out='', re=/https?:\/\/[^\s<>"']+/g, last=0, m;
     text=String(text||'');
@@ -1876,7 +1886,7 @@
     }
     document.getElementById('s-time').value=time;
     document.getElementById('s-name').value=name;
-    document.getElementById('s-note').value=note;
+    document.getElementById('s-note').value=note; growAll();
     document.getElementById('s-coords').value=coords;
     document.getElementById('stop-overlay').hidden=false;
   }
@@ -1996,7 +2006,7 @@
     document.getElementById('p-name').value=name;
     setAmountField('p-total',total,'p-total-preview');
     setAmountField('p-paid',paid,'p-paid-preview');
-    document.getElementById('p-note').value=note;
+    document.getElementById('p-note').value=note; growAll();
     document.getElementById('prepaid-overlay').hidden=false;
   }
   function closePrepaidModal(){ document.getElementById('prepaid-overlay').hidden=true; editingPrepaidId=null; }
@@ -2057,7 +2067,7 @@
     });
     dsel.value = findDay(dayId) ? dayId : '';
     document.getElementById('n-title').value=title;
-    document.getElementById('n-body').value=body;
+    document.getElementById('n-body').value=body; growAll();
     document.getElementById('n-phone').value=phone;
     applyNoteKind(k);
     document.getElementById('note-overlay').hidden=false;
