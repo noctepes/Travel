@@ -466,6 +466,13 @@
     border:1px solid var(--border);border-left:4px solid var(--a-weather);border-radius:var(--radius-md);
     background:var(--a-weather-bg);color:var(--text);font-size:15px;font-family:inherit;text-align:left;cursor:pointer;}
   #news-banner[hidden]{display:none;}
+  #sync-banner{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 16px;padding:12px 14px;
+    border:1px solid var(--border);border-left:4px solid var(--warn);border-radius:var(--radius-md);background:var(--surface);font-size:15px;}
+  #sync-banner[hidden]{display:none;}
+  #sync-banner .sb-text{flex:1;min-width:200px;text-wrap:pretty;}
+  #sync-banner .btn{flex:0 0 auto;min-height:36px;padding:0 14px;font-size:14px;}
+  .sync-code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px;opacity:.75;}
+  .room-code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:20px;font-weight:600;letter-spacing:.06em;}
   #news-banner b{color:var(--a-weather);}
   #news-banner .nb-go{margin-left:auto;font-size:14px;color:var(--a-weather);text-decoration:underline;white-space:nowrap;}
   .news-list{list-style:none;margin:6px 0 0;padding:0;}
@@ -506,6 +513,11 @@
       </div>
     </div>
 
+    <div id="sync-banner" hidden>
+      <span class="sb-text"><b>Máy này chưa vào phòng chung.</b> Chi tiêu nhập ở đây chưa đồng bộ với bạn đi cùng.</span>
+      <button class="btn" type="button" id="sync-banner-later">Để sau</button>
+      <button class="btn primary" type="button" id="sync-banner-go">Tham gia / tạo phòng</button>
+    </div>
     <button id="news-banner" type="button" hidden></button>
 
     <div class="layout">
@@ -2580,6 +2592,7 @@
     Object.keys(sync.meta).forEach(function(k){ var m=sync.meta[k]; if((m.sh && m.ah!==m.sh) || (m.t && m.ah!=='T')) n++; });
     return n;
   }
+  function roomShort(){ return String(sync.room||'').replace(/^trip_/,'').slice(0,4); }
   function syncSummary(){
     if(!sync.cfg || !sync.room) return {k:'off',t:'Chưa đồng bộ'};
     var n=pendingCount();
@@ -2597,7 +2610,13 @@
     var chip=document.getElementById('sync-chip'); if(!chip) return;
     var s=syncSummary();
     chip.className='sync-chip '+s.k;
-    document.getElementById('sync-chip-text').textContent=s.t;
+    var txt=document.getElementById('sync-chip-text');
+    txt.textContent=s.t;
+    // 4 ký tự đầu của mã phòng: nhìn hai máy là biết có chung phòng không
+    if(sync.room){ var sc=document.createElement('span'); sc.className='sync-code'; sc.textContent=' · '+roomShort(); txt.appendChild(sc); }
+    var sb=document.getElementById('sync-banner');
+    if(sb){ var hideSb=false; try{ hideSb=sessionStorage.getItem('cb-sync-banner-later')==='1'; }catch(e){}
+      sb.hidden = !!sync.room || !!sync.invite || hideSb; }
     var ov=document.getElementById('sync-overlay');
     if(ov && !ov.hidden){
       var a=document.activeElement;
@@ -2754,6 +2773,7 @@
         +'<div class="sync-row"><button class="btn" type="button" data-sync="dismiss-invite">Bỏ qua</button><button class="btn primary" type="button" data-sync="accept-invite">Tham gia</button></div>';
     } else if(sync.room){
       h+='<div class="sync-status"><span class="sync-dot sd-'+s.k+'"></span><span>'+escapeHtml(s.t)+'</span></div>';
+      h+='<p class="sync-note">Mã phòng: <span class="room-code">'+escapeHtml(roomShort())+'</span> · máy bạn đi cùng phải hiện đúng 4 ký tự này cạnh chữ “Đã đồng bộ”.</p>';
       if(sync.err) h+='<p class="sync-err">'+escapeHtml(sync.err)+'</p>';
       else if(sync.lastOk) h+='<p class="sync-note">Lần đồng bộ gần nhất: '+escapeHtml(timeStr(sync.lastOk))+'</p>';
       h+='<label class="sync-label" for="sync-link">Liên kết mời (gửi cho bạn đi cùng)</label>'
@@ -2798,7 +2818,7 @@
       var iv=sync.invite; sync.invite=null; clearHash();
       if(iv){ sync.cfg=iv.c; connectRoom(iv.r); showToast('Đã tham gia phòng chung'); }
     } else if(a==='dismiss-invite'){
-      sync.invite=null; clearHash(); renderSyncSheet();
+      sync.invite=null; clearHash(); renderSyncSheet(); updateSyncUi();
     } else if(a==='copy-invite'){
       copyText(inviteUrl());
     } else if(a==='copy-rules'){
@@ -2892,6 +2912,11 @@
   document.getElementById('sync-chip').addEventListener('click',openSyncSheet);
   document.getElementById('sync-close').addEventListener('click',closeSyncSheet);
   document.getElementById('news-banner').addEventListener('click',openNews);
+  document.getElementById('sync-banner-go').addEventListener('click',openSyncSheet);
+  document.getElementById('sync-banner-later').addEventListener('click',function(){
+    try{ sessionStorage.setItem('cb-sync-banner-later','1'); }catch(e){}
+    document.getElementById('sync-banner').hidden=true;
+  });
   document.getElementById('news-close').addEventListener('click',closeNews);
   document.getElementById('news-seen').addEventListener('click',function(){ closeNews(); clearNews(); });
   document.getElementById('news-overlay').addEventListener('click',function(e){
