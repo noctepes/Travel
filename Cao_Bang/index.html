@@ -242,12 +242,13 @@
   /* ---------- prepaid ---------- */
   .mini-btn{width:34px;height:34px;min-width:34px;border:none;background:none;}
   .pp-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);padding:4px 14px;}
-  .pp-row{display:flex;align-items:center;gap:9px;padding:10px 0;}
+  .pp-row{display:flex;align-items:flex-start;gap:9px;padding:10px 0;}
   .pp-row + .pp-row{border-top:1px solid var(--hairline);}
   .pp-main{flex:1;min-width:0;}
   .pp-name{font-size:15px;text-wrap:pretty;}
   .pp-sub{font-size:13px;color:var(--muted);margin-top:2px;font-variant-numeric:tabular-nums;text-wrap:pretty;}
   .pp-sub .due{color:var(--warn);}
+  .pp-note{font-size:13px;color:var(--muted);margin-top:3px;white-space:pre-wrap;}
   .pp-sub .done{color:var(--ok);}
   .pp-actions{display:flex;gap:0;flex-shrink:0;}
   .pp-actions .icon-btn{width:34px;height:34px;min-width:34px;border:none;background:none;}
@@ -296,6 +297,15 @@
   .note-top{display:flex;align-items:flex-start;gap:9px;}
   .note-title{flex:1;font-size:15.5px;font-weight:600;min-width:0;text-wrap:balance;}
   .note-body{font-size:14.5px;color:var(--text);margin-top:6px;white-space:pre-wrap;text-wrap:pretty;}
+  /* chữ dài không có dấu cách (link, mã) phải tự xuống dòng, không được đẩy trang rộng ra */
+  .pp-name,.pp-sub,.pp-note,.note-title,.note-body,.stop-name,.stop-note,.day-label,.news-text{overflow-wrap:anywhere;word-break:break-word;}
+  .clamp{display:-webkit-box;-webkit-box-orient:vertical;overflow:hidden;}
+  .clamp.c2{-webkit-line-clamp:2;line-clamp:2;}
+  .clamp.c6{-webkit-line-clamp:6;line-clamp:6;}
+  .clamp.open{display:block;-webkit-line-clamp:unset;line-clamp:none;overflow:visible;}
+  .more-btn{background:none;border:none;padding:4px 0 0;font:inherit;font-size:13px;color:var(--a-weather);text-decoration:underline;cursor:pointer;}
+  .ext-link{display:inline-block;max-width:100%;vertical-align:baseline;font-size:.92em;color:var(--a-weather);text-decoration:none;
+    background:var(--a-weather-bg);border-radius:6px;padding:0 6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
   .note-phone{
     display:inline-block;margin-top:9px;font-size:14.5px;color:var(--text);
     text-decoration:none;border:1px solid var(--border);border-radius:var(--radius-sm);
@@ -1536,6 +1546,45 @@
     p.textContent=txt;
   }
 
+  // link dài trong ghi chú: hiện thành nhãn ngắn theo tên miền, bấm để mở
+  function linkify(text){
+    var out='', re=/https?:\/\/[^\s<>"']+/g, last=0, m;
+    text=String(text||'');
+    while((m=re.exec(text))){
+      var url=m[0].replace(/[.,;:!?)\]]+$/,''), host='';
+      try{ host=new URL(url).hostname.replace(/^www\./,''); }catch(e){ host='link'; }
+      out+=escapeHtml(text.slice(last,m.index))
+        +'<a class="ext-link" href="'+escapeHtml(url)+'" target="_blank" rel="noopener" title="'+escapeHtml(url)+'">'+escapeHtml(host)+' ↗</a>';
+      last=m.index+url.length; re.lastIndex=last;
+    }
+    return out+escapeHtml(text.slice(last));
+  }
+  // ghi chú dài: thu gọn vài dòng, có nút Xem thêm; nhớ mục đang mở để render lại không bị đóng
+  var openClamps={};
+  function clampHtml(key,cls,lines,html){
+    var open=!!openClamps[key];
+    return '<div class="'+cls+' clamp c'+lines+(open?' open':'')+'" data-clamp="'+escapeHtml(key)+'">'+html+'</div>';
+  }
+  function applyClamps(root){
+    (root||document).querySelectorAll('[data-clamp]').forEach(function(el){
+      var nxt=el.nextElementSibling;
+      if(nxt && nxt.classList.contains('more-btn')) nxt.remove();
+      var open=el.classList.contains('open');
+      if(!open && el.scrollHeight<=el.clientHeight+2) return;
+      var b=document.createElement('button'); b.type='button'; b.className='more-btn';
+      b.textContent=open?'Thu gọn':'Xem thêm'; b.dataset.clampFor=el.dataset.clamp;
+      el.after(b);
+    });
+  }
+  var clampRt; window.addEventListener('resize',function(){ clearTimeout(clampRt); clampRt=setTimeout(function(){ applyClamps(); },150); });
+  document.addEventListener('click',function(e){
+    var b=e.target.closest ? e.target.closest('.more-btn') : null; if(!b) return;
+    var key=b.dataset.clampFor, el=b.previousElementSibling; if(!el) return;
+    if(openClamps[key]) delete openClamps[key]; else openClamps[key]=1;
+    el.classList.toggle('open',!!openClamps[key]);
+    applyClamps(el.parentNode);
+  });
+
   function renderPrepaid(){
     var wrap=document.getElementById('prepaid-list'); wrap.innerHTML='';
     if(!state.prepaid.length){
@@ -1548,11 +1597,12 @@
       var sub = rest>0
         ? 'Đã trả '+formatVND(p.paid||0)+' · <span class="due">còn '+formatVND(rest)+'</span>'
         : '<span class="done">Đã trả đủ</span>';
-      if(p.note) sub+=' · '+escapeHtml(p.note);
+
       var row=document.createElement('div'); row.className='pp-row';
       row.innerHTML=
         '<span class="pp-main"><span class="pp-name">'+escapeHtml(p.name||'')+'</span>'
-        +'<div class="pp-sub">'+sub+'</div></span>'
+        +'<div class="pp-sub">'+sub+'</div>'
+        +(p.note?clampHtml('pp:'+p.id,'pp-note',2,linkify(p.note)):'')+'</span>'
         +'<span class="pp-actions">'
           +'<button class="icon-btn" data-action="edit-prepaid" data-id="'+p.id+'" aria-label="Sửa">'+ICON_EDIT+'</button>'
           +'<button class="icon-btn danger" data-action="delete-prepaid" data-id="'+p.id+'" aria-label="Xoá">'+ICON_TRASH+'</button>'
@@ -1569,6 +1619,7 @@
       card.appendChild(foot2);
     }
     wrap.appendChild(card);
+    applyClamps(wrap);
   }
 
   function noteKind(n){ return n && n.kind==='outfit' ? 'outfit' : 'general'; }
@@ -1579,7 +1630,7 @@
         +'<button class="icon-btn" data-action="edit-note" data-id="'+n.id+'" aria-label="Sửa">'+ICON_EDIT+'</button>'
         +'<button class="icon-btn danger" data-action="delete-note" data-id="'+n.id+'" aria-label="Xoá">'+ICON_TRASH+'</button>'
       +'</span></div>';
-    if(n.body) html+='<div class="note-body">'+escapeHtml(n.body)+'</div>';
+    if(n.body) html+=clampHtml('note:'+n.id,'note-body',6,linkify(n.body));
     var linkedDay = n.dayId ? findDay(n.dayId) : null;
     if(linkedDay) html+='<div><span class="note-tag">'+escapeHtml(formatDateShort(linkedDay.date)+' · '+(linkedDay.label||''))+'</span></div>';
     if(n.phone) html+='<a class="note-phone" href="tel:'+escapeHtml(String(n.phone).replace(/[^0-9+]/g,''))+'">'+escapeHtml(n.phone)+'</a>';
@@ -1596,6 +1647,7 @@
       var list=state.notes.filter(function(n){ return noteKind(n)===c.kind; });
       if(!list.length){ wrap.innerHTML='<p class="empty-hint">'+c.empty+'</p>'; return; }
       list.forEach(function(n){ wrap.appendChild(noteCardEl(n)); });
+      applyClamps(wrap);
     });
   }
 
@@ -1666,7 +1718,7 @@
           '<div class="stop-row">'
           +'<span class="stop-time">'+escapeHtml(st.time||'')+'</span>'
           +'<span class="stop-main"><span class="stop-name">'+escapeHtml(st.name||'')+'</span>'
-          +(st.note?'<div class="stop-note">'+escapeHtml(st.note)+'</div>':'')
+          +(st.note?'<div class="stop-note">'+linkify(st.note)+'</div>':'')
           +'</span>'
           +'<span class="stop-actions">'
             +mapBtn
