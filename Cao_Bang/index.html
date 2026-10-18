@@ -626,7 +626,7 @@
     </div>
     <div class="field">
       <label for="f-amount">Số tiền (VNĐ)</label>
-      <input type="text" inputmode="numeric" id="f-amount" placeholder="VD: 45000" autocomplete="off">
+      <input type="text" inputmode="numeric" id="f-amount" placeholder="VD: 45.000" autocomplete="off">
       <div class="amount-preview" id="amount-preview"></div>
     </div>
     <div class="sheet-actions">
@@ -674,12 +674,12 @@
     </div>
     <div class="field">
       <label for="p-total">Tổng tiền phải trả (VNĐ)</label>
-      <input type="text" inputmode="numeric" id="p-total" placeholder="VD: 400000" autocomplete="off">
+      <input type="text" inputmode="numeric" id="p-total" placeholder="VD: 400.000" autocomplete="off">
       <div class="amount-preview" id="p-total-preview"></div>
     </div>
     <div class="field">
       <label for="p-paid">Đã trả / đã cọc (VNĐ)</label>
-      <input type="text" inputmode="numeric" id="p-paid" placeholder="VD: 100000" autocomplete="off">
+      <input type="text" inputmode="numeric" id="p-paid" placeholder="VD: 100.000" autocomplete="off">
       <div class="amount-preview" id="p-paid-preview"></div>
       <div class="field-hint">Trả hết rồi thì điền bằng tổng tiền. Phần chênh lệch sẽ được tính là tiền còn phải trả khi tới nơi.</div>
     </div>
@@ -785,6 +785,7 @@
     <div class="field">
       <label for="trip-edit-budget">Tổng ngân sách (VNĐ)</label>
       <input type="text" inputmode="numeric" id="trip-edit-budget" autocomplete="off">
+      <div class="amount-preview" id="trip-budget-preview"></div>
     </div>
     <div class="sheet-actions">
       <button class="btn" id="trip-edit-cancel">Huỷ</button>
@@ -1144,6 +1145,31 @@
   }
 
   function formatVND(n){ return (Math.round(Number(n)||0)).toLocaleString('vi-VN')+' đ'; }
+  function groupDigits(n){ return String(n).replace(/\B(?=(\d{3})+(?!\d))/g,'.'); }
+  // đọc số tiền thành chữ ngắn gọn để nhìn ra ngay gõ thừa/thiếu số 0: 1830362 -> "1 triệu 830 nghìn 362 đồng"
+  function amountWords(n){
+    n=Math.round(Number(n)||0); if(!n) return '';
+    var units=[[1e9,'tỷ'],[1e6,'triệu'],[1e3,'nghìn']], out=[];
+    units.forEach(function(u){ var q=Math.floor(n/u[0]); if(q){ out.push(groupDigits(q)+' '+u[1]); n-=q*u[0]; } });
+    if(n) out.push(String(n));
+    return out.join(' ')+' đồng';
+  }
+  // gõ tới đâu tự thêm dấu chấm tới đó, giữ con trỏ đúng chỗ
+  function formatAmountField(el){
+    var raw=el.value, caret=el.selectionStart==null ? raw.length : el.selectionStart;
+    var digitsBefore=raw.slice(0,caret).replace(/[^0-9]/g,'').length;
+    var digits=raw.replace(/[^0-9]/g,'').replace(/^0+(?=\d)/,'');
+    var out=digits ? groupDigits(digits) : '';
+    if(out!==raw) el.value=out;
+    var pos=0, seen=0;
+    while(pos<out.length && seen<digitsBefore){ if(/\d/.test(out.charAt(pos))) seen++; pos++; }
+    if(document.activeElement===el){ try{ el.setSelectionRange(pos,pos); }catch(e){} }
+    return parseAmountInput(out);
+  }
+  function setAmountField(id,v,previewId){
+    var el=document.getElementById(id); el.value=v ? groupDigits(Math.round(v)) : '';
+    if(previewId) document.getElementById(previewId).textContent=amountWords(v);
+  }
   function parseAmountInput(str){
     var d = String(str||'').replace(/[^0-9]/g,'');
     return d ? parseInt(d,10) : 0;
@@ -1798,8 +1824,7 @@
       }
     } else sel.value=dayId||defaultDayId();
     document.getElementById('f-note').value=note;
-    document.getElementById('f-amount').value=amount||'';
-    document.getElementById('amount-preview').textContent=amount?formatVND(amount):'';
+    setAmountField('f-amount',amount,'amount-preview');
     document.getElementById('new-cat-row').hidden=true;
     renderCategoryPicker(category);
   }
@@ -1862,11 +1887,9 @@
       }
     }
     document.getElementById('p-name').value=name;
-    document.getElementById('p-total').value=total;
-    document.getElementById('p-paid').value=paid;
+    setAmountField('p-total',total,'p-total-preview');
+    setAmountField('p-paid',paid,'p-paid-preview');
     document.getElementById('p-note').value=note;
-    document.getElementById('p-total-preview').textContent=total?formatVND(total):'';
-    document.getElementById('p-paid-preview').textContent=paid?formatVND(paid):'';
     document.getElementById('prepaid-overlay').hidden=false;
   }
   function closePrepaidModal(){ document.getElementById('prepaid-overlay').hidden=true; editingPrepaidId=null; }
@@ -2109,7 +2132,7 @@
   // ---------- TRIP EDIT ----------
   function openTripEdit(){
     document.getElementById('trip-edit-name').value=state.trip.name;
-    document.getElementById('trip-edit-budget').value=state.trip.budget;
+    setAmountField('trip-edit-budget',state.trip.budget,'trip-budget-preview');
     document.getElementById('trip-edit-overlay').hidden=false;
   }
   function closeTripEdit(){ document.getElementById('trip-edit-overlay').hidden=true; }
@@ -2772,9 +2795,10 @@
   document.getElementById('modal-overlay').addEventListener('click',function(e){ if(e.target.id==='modal-overlay') closeExpenseModal(); });
   document.getElementById('new-cat-confirm').addEventListener('click',confirmNewCategory);
   document.getElementById('new-cat-input').addEventListener('keydown',function(e){ if(e.key==='Enter'){e.preventDefault();confirmNewCategory();} });
-  document.getElementById('f-amount').addEventListener('input',function(e){
-    var v=parseAmountInput(e.target.value);
-    document.getElementById('amount-preview').textContent=v?formatVND(v):'';
+  [['f-amount','amount-preview'],['p-total','p-total-preview'],['p-paid','p-paid-preview'],['trip-edit-budget','trip-budget-preview']].forEach(function(pr){
+    document.getElementById(pr[0]).addEventListener('input',function(e){
+      document.getElementById(pr[1]).textContent=amountWords(formatAmountField(e.target));
+    });
   });
 
   document.getElementById('stop-save').addEventListener('click',saveStop);
@@ -2796,14 +2820,6 @@
   document.getElementById('prepaid-save').addEventListener('click',savePrepaid);
   document.getElementById('prepaid-cancel').addEventListener('click',closePrepaidModal);
   document.getElementById('prepaid-overlay').addEventListener('click',function(e){ if(e.target.id==='prepaid-overlay') closePrepaidModal(); });
-  document.getElementById('p-total').addEventListener('input',function(e){
-    var v=parseAmountInput(e.target.value);
-    document.getElementById('p-total-preview').textContent=v?formatVND(v):'';
-  });
-  document.getElementById('p-paid').addEventListener('input',function(e){
-    var v=parseAmountInput(e.target.value);
-    document.getElementById('p-paid-preview').textContent=v?formatVND(v):'';
-  });
 
   document.getElementById('add-pack').addEventListener('click',function(){ openPackModal(null); });
   document.getElementById('pack-save').addEventListener('click',savePack);
